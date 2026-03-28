@@ -3,6 +3,7 @@
 #include <vector>
 #include <random>
 #include <cmath>
+#include <algorithm>
 using namespace std;
 mt19937 rng(random_device{}());
 class User
@@ -171,4 +172,160 @@ public:
                 break;
         }
     }
+};
+class russian_roulete : public Game
+{
+    int player_chamber;
+    vector<int> opponentChambers;
+    int playerHP;
+    int opponentHP;
+    float basereward;
+    float luck_multiplier;
+    uniform_int_distribution<int> chamber;
+
+public:
+    russian_roulete(User &U) : chamber(1, 6)
+    {
+        u = &U ;
+        playerHP = 3;
+        opponentHP = 3;
+        luck_multiplier = 1.0 ;
+    }
+    void gameInfo() override
+    {
+        cout << "\nBOTH PLAYER AND COMPUTER HAVE 3 HEALTH POINTS PLAYER HAVE TO SHOOT THE COMPUTER 3 TIMES TO WIN THE GAME \nCOMPUTER WILL BE PRESENT IN 2 OUT 6 ROOMS !!\n ";
+    }
+
+    void setBaseReward()
+    {
+        this->placeBet() ;
+        basereward = bet ;
+    }
+
+    int getPlayerShot()
+    {
+        int choice;
+        while (true)
+        {
+            cout << "\nENTER WHICH ROOM (1-6) TO SHOOT IN\n\n";
+            cin >> choice;
+            if (choice >= 1 && choice <= 6)
+                break;
+            cout << "Invalid choice! Try again.\n";
+        }
+
+        return choice ;
+    }
+
+    void repositionOpponent()
+    {
+        opponentChambers.assign(6,0) ;
+        vector<int> temp = {1,2,3,4,5,6} ;
+        shuffle(temp.begin() , temp.end() , rng ) ;
+        int x  =  temp[0] , y = temp[1] ;
+        opponentChambers[x-1] = 1 ;
+        opponentChambers[y-1] = 1 ;
+    }
+
+    bool evaluateShot() 
+    {
+        if( opponentChambers[ player_chamber-1 ]  == 1) return true ;
+        else 
+            return false ;
+    }
+
+    void calculateLuckMultiplier()
+    {
+        if( u->getLuck() > 65 )
+        {
+            luck_multiplier = 1.5 ;
+        } 
+
+        else if(  u->getLuck() >= 35 && u->getLuck() <= 65 )
+            luck_multiplier = 1.0 ;
+        
+        else {
+            luck_multiplier = 0.9 ;
+        }
+    }
+
+    void resolveGame(bool playerWon)
+    {
+        if(playerWon)
+        {
+            u->updateAmount(basereward*luck_multiplier) ;
+            u->updateStreak(1);
+            u->updateLuck(-30);
+        }
+
+        else
+        {
+            u->updateAmount(-basereward) ;
+            u->updateStreak(0);
+            u->updateLuck(+20);
+        }
+    }
+
+    void resetGame()
+    {
+        playerHP = 3 ;
+        opponentHP = 3 ;
+        opponentChambers.assign(6,0) ;
+    }
+
+    void playRoulette()
+    {
+        int replay  ;
+        while(true)
+    {
+            cout<<"\n\n" ;
+            this->gameInfo() ;
+            cout<< "\n\n" ;
+            this->setBaseReward() ;
+            cout << "\n\nGAME STARTING\n\n" ;
+            while(true)
+            {
+            cout << "PLAYER HP  :" << playerHP << endl ;
+            cout << "OPPONENT HP  :" << opponentHP << endl ;
+            this->repositionOpponent() ;
+            player_chamber = this->getPlayerShot() ;
+            if( this->evaluateShot() ) 
+            {
+                cout << "\nOpponent loses HP\n" ;
+                opponentHP-- ; 
+            }
+            else
+            {
+                cout << "\nPLayer loses HP\n" ;
+                playerHP-- ;
+            }
+            
+            if(playerHP == 0)
+            {
+                this->resolveGame(0) ;
+                cout << "\n!! PLAYER LOSES !! \n" ;
+                cout << "\n AMOUNT LOST =  " << basereward  << endl ;
+                break ;
+            }
+            
+            else if( opponentHP == 0 )
+            {
+                this->calculateLuckMultiplier() ;
+                this->resolveGame(1) ;
+                cout << "\n---------------\nJACKPOT!!!!!\n---------------\n" ;
+                cout << "\n AMOUNT WON =  " << basereward*luck_multiplier  << endl ;
+                break ;
+            }
+            }
+        
+        this->resetGame() ;
+        cout << "\n\nWANT TO PLAY AGAIN PRESS 1 FOR YES 0 FOR NO\n\n" ;
+        cin >> replay ;
+        if(!replay) break ;
+        
+    }
+
+
+    }
+
 };
