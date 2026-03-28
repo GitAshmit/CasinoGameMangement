@@ -3,6 +3,8 @@
 #include <vector>
 #include <random>
 #include <cmath>
+#include <chrono>
+#include <thread>
 using namespace std;
 mt19937 rng(random_device{}());
 class User
@@ -169,6 +171,70 @@ public:
             cin >> F;
             if (F == 0)
                 break;
+        }
+    }
+};
+class slotMachine : public Game{
+    uniform_int_distribution <int> slot;
+    uniform_int_distribution <int> chance_list;
+    vector <string> symbols = {"🥀","🫦","💔","7","🍕","🗣️"};
+    public:
+    slotMachine(User &U) : slot(0,5), chance_list(0,99){
+        u = &U;
+    }
+    void gameInfo(){
+        cout<<"Slot Machine!!!\nPlace the bet in the slot and check your luck\n";
+    }
+    void playSlot(){
+        while(true){
+            placeBet();
+            string a , b , c;
+            int A , B , C, F , chance = chance_list(rng);
+            for(int i =0; i<5; i++){
+                cout<<"\r"<<symbols[slot(rng)]<<" | "<<symbols[slot(rng)]<<" | "<<symbols[slot(rng)]<<flush;
+                this_thread::sleep_for(chrono::milliseconds(100));
+            }
+            A = slot(rng);
+            a = symbols[A];
+            for(int i =0; i<5; i++){
+                cout<<"\r"<<a<<" | "<<symbols[slot(rng)]<<" | "<<symbols[slot(rng)]<<flush;
+                this_thread::sleep_for(chrono::milliseconds(100));
+            }
+            B = slot(rng);
+            if(chance < u->getLuck()){
+                if(abs(B-A)>1) B=A;
+            }
+            b = symbols[B];
+            for(int i =0; i<5; i++){
+                cout<<"\r"<<a<<" | "<<b<<" | "<<symbols[slot(rng)]<<flush;
+                this_thread::sleep_for(chrono::milliseconds(100));
+            }
+            C = slot(rng);
+            if(chance < u->getLuck()){
+                if(abs(C-A)>1 && abs(B-C)>1) C=A;
+            }
+            c = symbols[C];
+            cout<<"\r"<<a<<" | "<<b<<" | "<<c<<endl;
+            if(a==b && b==c){
+                cout<<"\n---------------JACKPOT!!!!!!\n---------------\nWon : "<<bet+bet*0.4<<endl;
+                u->updateAmount(bet*0.4);
+                u->updateStreak(1);
+            }
+            else if(a==b || b==c || a==c){
+                cout<<"Very Close!!!\nWon : "<<bet+bet*0.1<<endl;
+                u->updateAmount(bet*0.1);
+                u->updateStreak(0);
+            }
+            else{
+                cout<<"The Next Spin holds a JACKPOT!\nLoss : "<<bet<<endl;
+                u->updateAmount(-bet);
+                u->updateStreak(0);
+            }
+            cout<<"Wanna Play Again ? The Luck Engine is RUNNING!!! (Enter 1 for yes, 0 for no) :";
+            cin>>F;
+            if(!F){
+                break;
+            }
         }
     }
 };
