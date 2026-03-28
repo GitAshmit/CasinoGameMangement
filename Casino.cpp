@@ -260,14 +260,14 @@ public:
         {
             u->updateAmount(basereward*luck_multiplier) ;
             u->updateStreak(1);
-            u->updateLuck(-10);
+            u->updateLuck(-30);
         }
 
         else
         {
             u->updateAmount(-basereward) ;
             u->updateStreak(0);
-            u->updateLuck(+10);
+            u->updateLuck(+20);
         }
     }
 
