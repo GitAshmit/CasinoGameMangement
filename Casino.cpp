@@ -395,3 +395,137 @@ public:
     }
 
 };
+class blackJack : public Game{
+    vector <int> cards = {1,2,3,4,5,6,7,8,9,10,11,12,13};
+    uniform_int_distribution <int> chance_list;
+    public:
+    void gameInfo(){
+        cout<<"Black Jacks!!!\nA card game where the computer and player has 2 cards and the card closest to 21 wins\n";
+    }
+    blackJack(User &U) : chance_list(0,99){
+        u = &U;
+    }
+    string cardValue(int c){
+        if(c<11 && c>1) return to_string(c);
+        if(c==1) return ("Ace");
+        if(c==11) return ("Jack");
+        if(c==12) return ("Queen");
+        if(c==13) return ("King");
+        return ("Out of Bounds");
+    }
+    void checkAceSum(int &count, int &sum){
+        while(sum>21 && count>0){
+            sum -= 10;
+            count--;
+        }
+    }
+    bool checkBlackJack(int card1, int card2){
+        if((card1 == 1 && (card2>10 && card2<14)) || (card2 == 1 && (card1>10 && card1 <14))) return 1;
+        return 0;
+    }
+    void playBlackJack(){
+        while(true){
+            int player = 0, dealer = 0, choice, F, aceCountDealer = 0, aceCountPlayer = 0, p = 4, dBJ = 0, pBJ = 0;
+            placeBet();
+            shuffle(cards.begin(), cards.end(), rng);
+            if(cards[0] ==1){
+                player += 10;
+                aceCountPlayer++;
+            }
+            if(cards[2] ==1){
+                player += 10;
+                aceCountPlayer++;
+            }
+            if(cards[1] ==1){
+                dealer +=10;
+                aceCountDealer++;
+            }
+            if(cards[3] ==1){
+                dealer += 10;
+                aceCountDealer++;
+            }
+            player += cards[0] + cards[2];
+            dealer += cards[1] + cards[3];
+            pBJ = checkBlackJack(cards[0], cards[2]);
+            dBJ = checkBlackJack(cards[1], cards[3]);
+            cout<<"Your cards :"<<cardValue(cards[0])<<" "<<cardValue(cards[2])<<endl;
+            cout<<"Dealer cards :"<<cardValue(cards[1])<<" Hidden\n";
+            if(pBJ && !dBJ){
+                cout<<"\n---------------BLACK JACK JACPOT!!!!!!!!\n---------------\nAmount Won : "<<bet+bet*0.5<<endl;
+                u->updateAmount(bet*0.5);
+                u->updateStreak(1);
+                pBJ = 1;
+            }
+            else if(!pBJ && dBJ){
+                cout<<"Dealer  hit Black Jack!!!\nAmount Lost : "<<bet<<endl;
+                u->updateAmount(-bet);
+                u->updateStreak(0);
+            }
+            else if(pBJ && dBJ){
+                cout<<"Both Hit The Black Jack!!!\nDRAW!!!\n";
+            }
+            else{
+                while(true){
+                    int chance = chance_list(rng);
+                    while(true){
+                        cout<<"Enter you choice (1 to hit and 0 to stand) :";
+                        cin>>choice;
+                        if(choice == 1 || choice == 0 ) break;
+                        else cout<<"Invalid choice!!!\n";
+                    }
+                    if(!choice) break;
+                    int c = cards[p];
+                    if(chance<u->getLuck() && rng()%2){
+                        if(player+c >21) c = rng()%7 + 2;
+                    }
+                    cout<<"Your card : "<<c<<endl;
+                    player += c;
+                    if(c == 1){
+                        player += 10;
+                        aceCountPlayer++;
+                    }
+                    p++;
+                    checkAceSum(aceCountPlayer, player);
+                    cout<<"Your Cards :";
+                    for(int i = 0; i<p; i+=2) cout<<cardValue(cards[i])<<" ";
+                    cout<<endl;
+                    if(player>21) break;
+                }
+                if(dealer<17){
+                    while(dealer<17){
+                        int chance = chance_list(rng);
+                        int C = cards[p];
+                        if(chance>u->getLuck() && rng()%2){
+                            if(dealer+C>21) C = rng()&4 + 2;
+                        }
+                        dealer += C;
+                        if(C ==1){
+                            dealer += 10;
+                            aceCountDealer++;
+                        }
+                        p++;
+                        checkAceSum(aceCountDealer , dealer);
+                    }
+                    cout<<"Dealer Hits\n";
+                } 
+                else cout<<"Dealer Stand\n";
+                cout<<"Time to reveal cards\n";
+                cout<<"Dealer Sum : "<<dealer<<"\nPlayer Sum : "<<player<<endl;
+                if(player>21 || (player<dealer && dealer<21)){
+                    cout<<"Player Lost!\nAmount lost : "<<bet;
+                    u->updateAmount(-bet);
+                    u->updateStreak(0);
+                }
+                else if(player>dealer || dealer>21){
+                    cout<<"\n---------------JACKPOT!!!!\n---------------\nAmount Won : "<<bet+bet*0.4<<endl;
+                    u->updateAmount(bet*0.4);
+                    u->updateStreak(1);
+                }
+                else if(player == dealer) cout<<"DRAW!!!!\n";
+            }
+            cout<<"Want to play again ?(1 for yes and 0 for no) : ";
+            cin>>F;
+            if(F==0) break;
+        }
+    }
+};
