@@ -317,7 +317,7 @@ public:
             {
                 this->calculateLuckMultiplier() ;
                 this->resolveGame(1) ;
-                cout << "\n!! PLAYER WINS !! \n" ;
+                cout << "\n---------------\nJACKPOT!!!!!\n---------------\n" ;
                 cout << "\n AMOUNT WON =  " << basereward*luck_multiplier  << endl ;
                 break ;
             }
