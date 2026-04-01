@@ -6,6 +6,7 @@
 #include <chrono>
 #include <thread>
 #include <algorithm>
+#include "audio.h"
 using namespace std;
 mt19937 rng(random_device{}());
 class User
@@ -95,6 +96,9 @@ public:
                 break;
         }
     }
+    void playJackpot(){
+
+    }
 };
 class diceGuess : public Game
 {
@@ -129,6 +133,7 @@ public:
                 if (f)
                     break;
             }
+            playDiceRoll();
             int roll = dice(rng) + dice(rng);
             int chance = chance_list(rng);
             if (chance < (u->getLuck()))
@@ -220,16 +225,19 @@ class slotMachine : public Game{
                 cout<<"\n---------------JACKPOT!!!!!!\n---------------\nWon : "<<bet+bet*0.4<<endl;
                 u->updateAmount(bet*0.4);
                 u->updateStreak(1);
+                u->updateLuck(-30);
             }
             else if(a==b || b==c || a==c){
                 cout<<"Very Close!!!\nWon : "<<bet+bet*0.1<<endl;
                 u->updateAmount(bet*0.1);
                 u->updateStreak(0);
+                u->updateLuck(5);
             }
             else{
                 cout<<"The Next Spin holds a JACKPOT!\nLoss : "<<bet<<endl;
                 u->updateAmount(-bet);
                 u->updateStreak(0);
+                u->updateLuck(15);
             }
             cout<<"Wanna Play Again ? The Luck Engine is RUNNING!!! (Enter 1 for yes, 0 for no) :";
             cin>>F;
@@ -427,6 +435,7 @@ class blackJack : public Game{
         while(true){
             int player = 0, dealer = 0, choice, F, aceCountDealer = 0, aceCountPlayer = 0, p = 4, dBJ = 0, pBJ = 0;
             placeBet();
+            playShuffle();
             shuffle(cards.begin(), cards.end(), rng);
             if(cards[0] ==1){
                 player += 10;
@@ -454,12 +463,14 @@ class blackJack : public Game{
                 cout<<"\n---------------BLACK JACK JACPOT!!!!!!!!\n---------------\nAmount Won : "<<bet+bet*0.5<<endl;
                 u->updateAmount(bet*0.5);
                 u->updateStreak(1);
+                u->updateLuck(-35);
                 pBJ = 1;
             }
             else if(!pBJ && dBJ){
                 cout<<"Dealer  hit Black Jack!!!\nAmount Lost : "<<bet<<endl;
                 u->updateAmount(-bet);
                 u->updateStreak(0);
+                u->updateLuck(20);
             }
             else if(pBJ && dBJ){
                 cout<<"Both Hit The Black Jack!!!\nDRAW!!!\n";
@@ -515,11 +526,13 @@ class blackJack : public Game{
                     cout<<"Player Lost!\nAmount lost : "<<bet;
                     u->updateAmount(-bet);
                     u->updateStreak(0);
+                    u->updateLuck(20);
                 }
                 else if(player>dealer || dealer>21){
                     cout<<"\n---------------JACKPOT!!!!\n---------------\nAmount Won : "<<bet+bet*0.4<<endl;
                     u->updateAmount(bet*0.4);
                     u->updateStreak(1);
+                    u->updateLuck(-30);
                 }
                 else if(player == dealer) cout<<"DRAW!!!!\n";
             }
