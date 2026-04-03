@@ -6,6 +6,7 @@
 #include <chrono>
 #include <thread>
 #include <algorithm>
+#include <SFML/Audio.hpp>
 #include "audio.h"
 using namespace std;
 mt19937 rng(random_device{}());
@@ -19,11 +20,11 @@ protected:
     vector<bool> streak;
 
 public:
-    User(string n, int c, int l, float a)
+    User(string n, int c, float a, int l=30)
     {
         name = n;
         CID = c;
-        luck = 30;
+        luck = l;
         amountWon = a;
     }
     void display() const
@@ -96,9 +97,6 @@ public:
                 break;
         }
     }
-    void playJackpot(){
-
-    }
 };
 class diceGuess : public Game
 {
@@ -144,7 +142,7 @@ public:
                     roll++;
                 roll = max(2, min(12, roll));
             }
-            cout << "Computer Guess :" << roll;
+            cout << "Computer Guess :" << roll<<endl;
             if (abs(ch - roll) == 2)
             {
                 cout << "Close Guess!!!\nAmount Won = " << (bet + bet * 0.1) << "!!!\n";
@@ -161,7 +159,8 @@ public:
             }
             else if (ch == roll)
             {
-                cout << "\n---------------\nJACKPOT!!!!!\n---------------\nAmount Won = " << (bet + bet * 0.5) << "!!!\n";
+                playJackpot();
+                cout<<"Amount Won = " << (bet + bet * 0.5) << "!!!\n";
                 u->updateAmount(bet * 0.5);
                 u->updateLuck(-80);
                 u->updateStreak(1);
@@ -196,33 +195,23 @@ class slotMachine : public Game{
             placeBet();
             string a , b , c;
             int A , B , C, F , chance = chance_list(rng);
-            for(int i =0; i<5; i++){
-                cout<<"\r"<<symbols[slot(rng)]<<" | "<<symbols[slot(rng)]<<" | "<<symbols[slot(rng)]<<flush;
-                this_thread::sleep_for(chrono::milliseconds(100));
-            }
             A = slot(rng);
             a = symbols[A];
-            for(int i =0; i<5; i++){
-                cout<<"\r"<<a<<" | "<<symbols[slot(rng)]<<" | "<<symbols[slot(rng)]<<flush;
-                this_thread::sleep_for(chrono::milliseconds(100));
-            }
             B = slot(rng);
             if(chance < u->getLuck()){
                 if(abs(B-A)>1) B=A;
             }
             b = symbols[B];
-            for(int i =0; i<5; i++){
-                cout<<"\r"<<a<<" | "<<b<<" | "<<symbols[slot(rng)]<<flush;
-                this_thread::sleep_for(chrono::milliseconds(100));
-            }
             C = slot(rng);
             if(chance < u->getLuck()){
                 if(abs(C-A)>1 && abs(B-C)>1) C=A;
             }
             c = symbols[C];
+            playSlotMachine(a,b,c,symbols);
             cout<<"\r"<<a<<" | "<<b<<" | "<<c<<endl;
             if(a==b && b==c){
-                cout<<"\n---------------JACKPOT!!!!!!\n---------------\nWon : "<<bet+bet*0.4<<endl;
+                playJackpot();
+                cout<<"Won : "<<bet+bet*0.4<<endl;
                 u->updateAmount(bet*0.4);
                 u->updateStreak(1);
                 u->updateLuck(-30);
@@ -295,6 +284,7 @@ public:
     {
         opponentChambers.assign(6,0) ;
         vector<int> temp = {1,2,3,4,5,6} ;
+        playReload();
         shuffle(temp.begin() , temp.end() , rng ) ;
         int x  =  temp[0] , y = temp[1] ;
         opponentChambers[x-1] = 1 ;
@@ -303,7 +293,10 @@ public:
 
     bool evaluateShot() 
     {
-        if( opponentChambers[ player_chamber-1 ]  == 1) return true ;
+        if( opponentChambers[ player_chamber-1 ]  == 1){
+            playShoot();
+            return true ;
+        }
         else 
             return false ;
     }
@@ -386,7 +379,7 @@ public:
             {
                 this->calculateLuckMultiplier() ;
                 this->resolveGame(1) ;
-                cout << "\n---------------\nJACKPOT!!!!!\n---------------\n" ;
+                playJackpot();
                 cout << "\n AMOUNT WON =  " << basereward*luck_multiplier  << endl ;
                 break ;
             }
@@ -460,7 +453,9 @@ class blackJack : public Game{
             cout<<"Your cards :"<<cardValue(cards[0])<<" "<<cardValue(cards[2])<<endl;
             cout<<"Dealer cards :"<<cardValue(cards[1])<<" Hidden\n";
             if(pBJ && !dBJ){
-                cout<<"\n---------------BLACK JACK JACPOT!!!!!!!!\n---------------\nAmount Won : "<<bet+bet*0.5<<endl;
+                cout<<"Black Jack!!!!";
+                playJackpot();
+                cout<<"Amount Won : "<<bet+bet*0.5<<endl;
                 u->updateAmount(bet*0.5);
                 u->updateStreak(1);
                 u->updateLuck(-35);
@@ -529,7 +524,8 @@ class blackJack : public Game{
                     u->updateLuck(20);
                 }
                 else if(player>dealer || dealer>21){
-                    cout<<"\n---------------JACKPOT!!!!\n---------------\nAmount Won : "<<bet+bet*0.4<<endl;
+                    playJackpot();
+                    cout<<"Amount Won : "<<bet+bet*0.4<<endl;
                     u->updateAmount(bet*0.4);
                     u->updateStreak(1);
                     u->updateLuck(-30);
@@ -542,3 +538,8 @@ class blackJack : public Game{
         }
     }
 };
+int main(){
+    User obj1("Ravi",101,20000);
+    slotMachine obj(obj1);
+    obj.playSlot();
+}
