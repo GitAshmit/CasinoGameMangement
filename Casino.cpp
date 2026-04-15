@@ -6,6 +6,8 @@
 #include <chrono>
 #include <thread>
 #include <algorithm>
+#include <SFML/Audio.hpp>
+#include "audio.h"
 using namespace std;
 mt19937 rng(random_device{}());
 class User
@@ -18,11 +20,11 @@ protected:
     vector<bool> streak;
 
 public:
-    User(string n, int c, int l, float a)
+    User(string n, int c, float a, int l=30)
     {
         name = n;
         CID = c;
-        luck = 30;
+        luck = l;
         amountWon = a;
     }
     void display() const
@@ -129,6 +131,7 @@ public:
                 if (f)
                     break;
             }
+            playDiceRoll();
             int roll = dice(rng) + dice(rng);
             int chance = chance_list(rng);
             if (chance < (u->getLuck()))
@@ -139,7 +142,7 @@ public:
                     roll++;
                 roll = max(2, min(12, roll));
             }
-            cout << "Computer Guess :" << roll;
+            cout << "Computer Roll :" << roll<<endl;
             if (abs(ch - roll) == 2)
             {
                 cout << "Close Guess!!!\nAmount Won = " << (bet + bet * 0.1) << "!!!\n";
@@ -156,7 +159,8 @@ public:
             }
             else if (ch == roll)
             {
-                cout << "\n---------------\nJACKPOT!!!!!\n---------------\nAmount Won = " << (bet + bet * 0.5) << "!!!\n";
+                playJackpot();
+                cout<<"Amount Won = " << (bet + bet * 0.5) << "!!!\n";
                 u->updateAmount(bet * 0.5);
                 u->updateLuck(-80);
                 u->updateStreak(1);
@@ -178,7 +182,7 @@ public:
 class slotMachine : public Game{
     uniform_int_distribution <int> slot;
     uniform_int_distribution <int> chance_list;
-    vector <string> symbols = {"🥀","🫦","💔","7","🍕","🗣️"};
+    vector <string> symbols = {"1","2","3","4","5","6"};
     public:
     slotMachine(User &U) : slot(0,5), chance_list(0,99){
         u = &U;
@@ -191,45 +195,38 @@ class slotMachine : public Game{
             placeBet();
             string a , b , c;
             int A , B , C, F , chance = chance_list(rng);
-            for(int i =0; i<5; i++){
-                cout<<"\r"<<symbols[slot(rng)]<<" | "<<symbols[slot(rng)]<<" | "<<symbols[slot(rng)]<<flush;
-                this_thread::sleep_for(chrono::milliseconds(100));
-            }
             A = slot(rng);
             a = symbols[A];
-            for(int i =0; i<5; i++){
-                cout<<"\r"<<a<<" | "<<symbols[slot(rng)]<<" | "<<symbols[slot(rng)]<<flush;
-                this_thread::sleep_for(chrono::milliseconds(100));
-            }
             B = slot(rng);
             if(chance < u->getLuck()){
                 if(abs(B-A)>1) B=A;
             }
             b = symbols[B];
-            for(int i =0; i<5; i++){
-                cout<<"\r"<<a<<" | "<<b<<" | "<<symbols[slot(rng)]<<flush;
-                this_thread::sleep_for(chrono::milliseconds(100));
-            }
             C = slot(rng);
             if(chance < u->getLuck()){
                 if(abs(C-A)>1 && abs(B-C)>1) C=A;
             }
             c = symbols[C];
+            playSlotMachine(a,b,c,symbols);
             cout<<"\r"<<a<<" | "<<b<<" | "<<c<<endl;
             if(a==b && b==c){
-                cout<<"\n---------------JACKPOT!!!!!!\n---------------\nWon : "<<bet+bet*0.4<<endl;
+                playJackpot();
+                cout<<"Won : "<<bet+bet*0.4<<endl;
                 u->updateAmount(bet*0.4);
                 u->updateStreak(1);
+                u->updateLuck(-30);
             }
             else if(a==b || b==c || a==c){
                 cout<<"Very Close!!!\nWon : "<<bet+bet*0.1<<endl;
                 u->updateAmount(bet*0.1);
                 u->updateStreak(0);
+                u->updateLuck(5);
             }
             else{
                 cout<<"The Next Spin holds a JACKPOT!\nLoss : "<<bet<<endl;
                 u->updateAmount(-bet);
                 u->updateStreak(0);
+                u->updateLuck(15);
             }
             cout<<"Wanna Play Again ? The Luck Engine is RUNNING!!! (Enter 1 for yes, 0 for no) :";
             cin>>F;
@@ -287,6 +284,7 @@ public:
     {
         opponentChambers.assign(6,0) ;
         vector<int> temp = {1,2,3,4,5,6} ;
+        playReload();
         shuffle(temp.begin() , temp.end() , rng ) ;
         int x  =  temp[0] , y = temp[1] ;
         opponentChambers[x-1] = 1 ;
@@ -295,7 +293,10 @@ public:
 
     bool evaluateShot() 
     {
-        if( opponentChambers[ player_chamber-1 ]  == 1) return true ;
+        playShoot();
+        if( opponentChambers[ player_chamber-1 ]  == 1){
+            return true ;
+        }
         else 
             return false ;
     }
@@ -378,7 +379,7 @@ public:
             {
                 this->calculateLuckMultiplier() ;
                 this->resolveGame(1) ;
-                cout << "\n---------------\nJACKPOT!!!!!\n---------------\n" ;
+                playJackpot();
                 cout << "\n AMOUNT WON =  " << basereward*luck_multiplier  << endl ;
                 break ;
             }
@@ -389,9 +390,233 @@ public:
         cin >> replay ;
         if(!replay) break ;
         
-    }
-
-
+        }
     }
 
 };
+class blackJack : public Game{
+    vector <int> cards = {1,2,3,4,5,6,7,8,9,10,11,12,13};
+    uniform_int_distribution <int> chance_list;
+    public:
+    void gameInfo(){
+        cout<<"Black Jacks!!!\nA card game where the computer and player has 2 cards and the card closest to 21 wins\n";
+    }
+    blackJack(User &U) : chance_list(0,99){
+        u = &U;
+    }
+    string cardValue(int c){
+        if(c<11 && c>1) return to_string(c);
+        if(c==1) return ("Ace");
+        if(c==11) return ("Jack");
+        if(c==12) return ("Queen");
+        if(c==13) return ("King");
+        return ("Out of Bounds");
+    }
+    void checkAceSum(int &count, int &sum){
+        while(sum>21 && count>0){
+            sum -= 10;
+            count--;
+        }
+    }
+    bool checkBlackJack(int card1, int card2){
+        if((card1 == 1 && (card2>10 && card2<14)) || (card2 == 1 && (card1>10 && card1 <14))) return 1;
+        return 0;
+    }
+    void playBlackJack(){
+        while(true){
+            int player = 0, dealer = 0, choice, F, aceCountDealer = 0, aceCountPlayer = 0, p = 4, dBJ = 0, pBJ = 0;
+            placeBet();
+            playShuffle();
+            shuffle(cards.begin(), cards.end(), rng);
+            if(cards[0] ==1){
+                player += 10;
+                aceCountPlayer++;
+            }
+            if(cards[2] ==1){
+                player += 10;
+                aceCountPlayer++;
+            }
+            if(cards[1] ==1){
+                dealer +=10;
+                aceCountDealer++;
+            }
+            if(cards[3] ==1){
+                dealer += 10;
+                aceCountDealer++;
+            }
+            player += cards[0] + cards[2];
+            dealer += cards[1] + cards[3];
+            pBJ = checkBlackJack(cards[0], cards[2]);
+            dBJ = checkBlackJack(cards[1], cards[3]);
+            cout<<"Your cards :"<<cardValue(cards[0])<<" "<<cardValue(cards[2])<<endl;
+            cout<<"Dealer cards :"<<cardValue(cards[1])<<" Hidden\n";
+            if(pBJ && !dBJ){
+                cout<<"Black Jack!!!!";
+                playJackpot();
+                cout<<"Amount Won : "<<bet+bet*0.5<<endl;
+                u->updateAmount(bet*0.5);
+                u->updateStreak(1);
+                u->updateLuck(-35);
+                pBJ = 1;
+            }
+            else if(!pBJ && dBJ){
+                cout<<"Dealer  hit Black Jack!!!\nAmount Lost : "<<bet<<endl;
+                u->updateAmount(-bet);
+                u->updateStreak(0);
+                u->updateLuck(20);
+            }
+            else if(pBJ && dBJ){
+                cout<<"Both Hit The Black Jack!!!\nDRAW!!!\n";
+            }
+            else{
+                while(true){
+                    int chance = chance_list(rng);
+                    while(true){
+                        cout<<"Enter you choice (1 to hit and 0 to stand) :";
+                        cin>>choice;
+                        if(choice == 1 || choice == 0 ) break;
+                        else cout<<"Invalid choice!!!\n";
+                    }
+                    if(!choice) break;
+                    int c = cards[p];
+                    if(chance<u->getLuck() && rng()%2){
+                        if(player+c >21) c = rng()%7 + 2;
+                    }
+                    cout<<"Your card : "<<c<<endl;
+                    player += c;
+                    if(c == 1){
+                        player += 10;
+                        aceCountPlayer++;
+                    }
+                    p++;
+                    checkAceSum(aceCountPlayer, player);
+                    cout<<"Your Cards :";
+                    for(int i = 0; i<p; i+=2) cout<<cardValue(cards[i])<<" ";
+                    cout<<endl;
+                    if(player>21) break;
+                }
+                if(dealer<17){
+                    while(dealer<17){
+                        int chance = chance_list(rng);
+                        int C = cards[p];
+                        if(chance>u->getLuck() && rng()%2){
+                            if(dealer+C>21) C = rng()&4 + 2;
+                        }
+                        dealer += C;
+                        if(C ==1){
+                            dealer += 10;
+                            aceCountDealer++;
+                        }
+                        p++;
+                        checkAceSum(aceCountDealer , dealer);
+                    }
+                    cout<<"Dealer Hits\n";
+                } 
+                else cout<<"Dealer Stand\n";
+                cout<<"Time to reveal cards\n";
+                cout<<"Dealer Sum : "<<dealer<<"\nPlayer Sum : "<<player<<endl;
+                if(player>21 || (player<dealer && dealer<21)){
+                    cout<<"Player Lost!\nAmount lost : "<<bet;
+                    u->updateAmount(-bet);
+                    u->updateStreak(0);
+                    u->updateLuck(20);
+                }
+                else if(player>dealer || dealer>21){
+                    playJackpot();
+                    cout<<"Amount Won : "<<bet+bet*0.4<<endl;
+                    u->updateAmount(bet*0.4);
+                    u->updateStreak(1);
+                    u->updateLuck(-30);
+                }
+                else if(player == dealer) cout<<"DRAW!!!!\n";
+            }
+            cout<<"Want to play again ?(1 for yes and 0 for no) : ";
+            cin>>F;
+            if(F==0) break;
+        }
+    }
+};
+class horseRace : public Game {
+    uniform_real_distribution<float> speed_mod;
+    vector<string> horses = {"Alpha", "Bravo", "Charlie", "Delta", "Echo"};
+
+public:
+    horseRace(User &U) : speed_mod(0.5, 2.0) {
+        u = &U;
+        gameName = "Thundering Hooves";
+    }
+
+    void gameInfo() override {
+        cout << "\n--- HORSE RACE BETTING ---" << endl;
+        cout << "Pick a horse:-\n1. Alpha\n2. Bravo\n3. Charlie\n4. Delta\n5. Echo.\nEach horse has a random performance." << endl;
+        cout << "If your horse wins, you get 2.5x your bet!" << endl;
+        cout << "High luck increases the chance of your horse getting a speed boost." << endl;
+    }
+
+    void playRace() {
+        while (true) {
+            gameInfo();
+            placeBet();
+
+            int choice;
+            while (true) {
+                cout << "Choose your horse\n1. Alpha\n2. Bravo\n3. Charlie\n4. Delta\n5. Echo\nEnter your choice : ";
+                cin >> choice;
+                if (choice >= 1 && choice <= 5) break;
+                cout << "Invalid stable! Choose 1 to 5.\n";
+            }
+            playShoot();
+            cout << "\nTHE RACE IS ON!\n";
+            playHorse();
+            vector<float> progress(5, 0.0);
+            bool raceFinished = false;
+            int winner = -1;
+            while (!raceFinished) {
+                for (int i = 0; i < 5; i++) {
+                    float boost = speed_mod(rng);
+                    if (i == (choice - 1) && (rng() % 100 < u->getLuck())) {
+                        boost += 0.5; 
+                    }
+                    progress[i] += boost;
+                    cout << horses[i] << " |";
+                    for (int j = 0; j < (int)progress[i]; j++) cout << "-";
+                    cout << ">" << endl;
+
+                    if (progress[i] >= 20.0) {
+                        raceFinished = true;
+                        winner = i;
+                    }
+                }
+                this_thread::sleep_for(chrono::milliseconds(200));
+                if (!raceFinished) cout << "\033[5A"; 
+            }
+
+            cout << "\nWINNER: " << horses[winner] << "!\n";
+
+            if (winner == (choice - 1)) {
+                float reward = bet * 1.5; 
+                cout << "CHAMPION! You won " << (bet + reward) << "!" << endl;
+                u->updateAmount(reward);
+                u->updateLuck(-40);
+                u->updateStreak(1);
+            } else {
+                cout << "Better luck at the next track. Lost: " << bet << endl;
+                u->updateAmount(-bet);
+                u->updateLuck(15);
+                u->updateStreak(0);
+            }
+
+            int F;
+            cout << "Wanna visit the stables again? (1 for Yes, 0 for No): ";
+            cin >> F;
+            if (F == 0) break;
+        }
+    }
+};
+int main(){
+    User obj1("Ravi",101,20000);
+    horseRace obj(obj1);
+    obj.playRace();
+    diceGuess object(obj1);
+    object.playDiceGame();
+}
