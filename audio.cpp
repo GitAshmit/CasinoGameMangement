@@ -139,5 +139,19 @@ void playShuffle(){
     sound.play();
     while(sound.getStatus() == sf::Sound::Status::Playing) sf::sleep(sf::milliseconds(100));
 }
+void playHorse(){
+    static sf::SoundBuffer buffer;
+    bool load = false;
+    if(!load){
+        if(!buffer.loadFromFile("Sounds/horse.wav")){
+            cout<<"Failed to load horse neigh sound\n";
+            return;
+        }
+        load = true;
+    }
+    sf::Sound sound(buffer);
+    sound.play();
+    while(sound.getStatus() == sf::Sound::Status::Playing) sf::sleep(sf::milliseconds(100));
+}
 
 

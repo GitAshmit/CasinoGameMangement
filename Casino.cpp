@@ -142,7 +142,7 @@ public:
                     roll++;
                 roll = max(2, min(12, roll));
             }
-            cout << "Computer Guess :" << roll<<endl;
+            cout << "Computer Roll :" << roll<<endl;
             if (abs(ch - roll) == 2)
             {
                 cout << "Close Guess!!!\nAmount Won = " << (bet + bet * 0.1) << "!!!\n";
@@ -182,7 +182,7 @@ public:
 class slotMachine : public Game{
     uniform_int_distribution <int> slot;
     uniform_int_distribution <int> chance_list;
-    vector <string> symbols = {"🥀","🫦","💔","7","🍕","🗣️"};
+    vector <string> symbols = {"1","2","3","4","5","6"};
     public:
     slotMachine(User &U) : slot(0,5), chance_list(0,99){
         u = &U;
@@ -293,8 +293,8 @@ public:
 
     bool evaluateShot() 
     {
+        playShoot();
         if( opponentChambers[ player_chamber-1 ]  == 1){
-            playShoot();
             return true ;
         }
         else 
@@ -390,9 +390,7 @@ public:
         cin >> replay ;
         if(!replay) break ;
         
-    }
-
-
+        }
     }
 
 };
@@ -538,8 +536,87 @@ class blackJack : public Game{
         }
     }
 };
+class horseRace : public Game {
+    uniform_real_distribution<float> speed_mod;
+    vector<string> horses = {"Alpha", "Bravo", "Charlie", "Delta", "Echo"};
+
+public:
+    horseRace(User &U) : speed_mod(0.5, 2.0) {
+        u = &U;
+        gameName = "Thundering Hooves";
+    }
+
+    void gameInfo() override {
+        cout << "\n--- HORSE RACE BETTING ---" << endl;
+        cout << "Pick a horse:-\n1. Alpha\n2. Bravo\n3. Charlie\n4. Delta\n5. Echo.\nEach horse has a random performance." << endl;
+        cout << "If your horse wins, you get 2.5x your bet!" << endl;
+        cout << "High luck increases the chance of your horse getting a speed boost." << endl;
+    }
+
+    void playRace() {
+        while (true) {
+            gameInfo();
+            placeBet();
+
+            int choice;
+            while (true) {
+                cout << "Choose your horse\n1. Alpha\n2. Bravo\n3. Charlie\n4. Delta\n5. Echo\nEnter your choice : ";
+                cin >> choice;
+                if (choice >= 1 && choice <= 5) break;
+                cout << "Invalid stable! Choose 1 to 5.\n";
+            }
+            playShoot();
+            cout << "\nTHE RACE IS ON!\n";
+            playHorse();
+            vector<float> progress(5, 0.0);
+            bool raceFinished = false;
+            int winner = -1;
+            while (!raceFinished) {
+                for (int i = 0; i < 5; i++) {
+                    float boost = speed_mod(rng);
+                    if (i == (choice - 1) && (rng() % 100 < u->getLuck())) {
+                        boost += 0.5; 
+                    }
+                    progress[i] += boost;
+                    cout << horses[i] << " |";
+                    for (int j = 0; j < (int)progress[i]; j++) cout << "-";
+                    cout << ">" << endl;
+
+                    if (progress[i] >= 20.0) {
+                        raceFinished = true;
+                        winner = i;
+                    }
+                }
+                this_thread::sleep_for(chrono::milliseconds(200));
+                if (!raceFinished) cout << "\033[5A"; 
+            }
+
+            cout << "\nWINNER: " << horses[winner] << "!\n";
+
+            if (winner == (choice - 1)) {
+                float reward = bet * 1.5; 
+                cout << "CHAMPION! You won " << (bet + reward) << "!" << endl;
+                u->updateAmount(reward);
+                u->updateLuck(-40);
+                u->updateStreak(1);
+            } else {
+                cout << "Better luck at the next track. Lost: " << bet << endl;
+                u->updateAmount(-bet);
+                u->updateLuck(15);
+                u->updateStreak(0);
+            }
+
+            int F;
+            cout << "Wanna visit the stables again? (1 for Yes, 0 for No): ";
+            cin >> F;
+            if (F == 0) break;
+        }
+    }
+};
 int main(){
     User obj1("Ravi",101,20000);
-    slotMachine obj(obj1);
-    obj.playSlot();
+    horseRace obj(obj1);
+    obj.playRace();
+    diceGuess object(obj1);
+    object.playDiceGame();
 }

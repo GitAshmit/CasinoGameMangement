@@ -9,4 +9,5 @@
     void playDiceRoll();
     void playSlotMachine(std::string a, std::string b, std::string c, std::vector <std::string> &symbols);
     void playShuffle();
+    void playHorse();
 #endif
