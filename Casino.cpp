@@ -579,20 +579,23 @@ public:
                     }
                     progress[i] += boost;
                     cout << horses[i] << " |";
-                    for (int j = 0; j < (int)progress[i]; j++) cout << "-";
-                    cout << ">" << endl;
-
+                    int p = (int)progress[i];
+                    for (int j = 0; j < 20; j++) {
+                        if (j == p) cout << ">";
+                        else cout << "-";
+                    }
+                    cout << "| FINISH" << endl;
                     if (progress[i] >= 20.0) {
                         raceFinished = true;
                         winner = i;
                     }
                 }
-                this_thread::sleep_for(chrono::milliseconds(200));
-                if (!raceFinished) cout << "\033[5A"; 
+                if (!raceFinished) {
+                    this_thread::sleep_for(chrono::milliseconds(200));
+                    cout << "\033[5A";
+                }
             }
-
             cout << "\nWINNER: " << horses[winner] << "!\n";
-
             if (winner == (choice - 1)) {
                 float reward = bet * 1.5; 
                 cout << "CHAMPION! You won " << (bet + reward) << "!" << endl;
@@ -605,7 +608,6 @@ public:
                 u->updateLuck(15);
                 u->updateStreak(0);
             }
-
             int F;
             cout << "Wanna visit the stables again? (1 for Yes, 0 for No): ";
             cin >> F;
