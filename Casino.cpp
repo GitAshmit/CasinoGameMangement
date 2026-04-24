@@ -6,8 +6,12 @@
 #include <chrono>
 #include <thread>
 #include <algorithm>
-#include <SFML/Audio.hpp>
-#include "audio.h"
+// #include <SFML/Audio.hpp>
+// #include "audio.h"
+#include <fstream>
+#include <sstream>
+#include <limits>
+
 using namespace std;
 mt19937 rng(random_device{}());
 class User
@@ -17,15 +21,17 @@ protected:
     int CID;
     int luck;
     float amountWon;
+    int total_points;
     vector<bool> streak;
 
 public:
-    User(string n, int c, float a, int l=30)
+    User(string n, int c, float a, int l = 30)
     {
         name = n;
         CID = c;
         luck = l;
         amountWon = a;
+        total_points = 0;
     }
     void display() const
     {
@@ -63,12 +69,186 @@ public:
         if (N > 6)
             streak.erase(streak.begin());
     }
+
+    void updatetotalpoints(int p)
+    {
+        total_points = max(0, total_points + p);
+    }
+
+    int gettotalpoints() const { return total_points; }
+
+    int getCID() const { return CID; }
+
+    void saveToFile() const
+    {
+        ifstream fin("users.txt");
+        vector<string> lines;
+        string line;
+        bool found = false;
+
+        // Read all existing lines
+        while (getline(fin, line))
+        {
+            if (line.empty())
+                continue;
+
+            istringstream ss(line);
+            string idStr, name, amountStr, luckStr, pointsStr;
+
+            getline(ss, idStr, '|');
+            getline(ss, name, '|');
+            getline(ss, amountStr, '|');
+            getline(ss, luckStr, '|');
+            getline(ss, pointsStr, '|');
+
+            // Validate fields
+            if (idStr.empty() || name.empty() || amountStr.empty() ||
+                luckStr.empty() || pointsStr.empty())
+            {
+                continue;
+            }
+
+            int id;
+            float amount;
+            int luck, points;
+
+            try
+            {
+                id = stoi(idStr);
+                amount = stof(amountStr);
+                luck = stoi(luckStr);
+                points = stoi(pointsStr);
+            }
+            catch (...)
+            {
+                continue; // skip corrupted line
+            }
+
+            if (id == CID)
+            {
+                // Replace current user
+                lines.push_back(to_string(CID) + "|" + name + "|" +
+                                to_string(amountWon) + "|" +
+                                to_string(luck) + "|" +
+                                to_string(total_points));
+                found = true;
+            }
+            else
+            {
+                // Keep only VALID lines
+                lines.push_back(line);
+            }
+        }
+        fin.close();
+
+        // If user wasn't in file yet, add them
+        if (!found)
+        {
+            lines.push_back(to_string(CID) + "|" + name + "|" +
+                            to_string(amountWon) + "|" +
+                            to_string(luck) + "|" +
+                            to_string(total_points));
+        }
+
+        // Write everything back
+        ofstream fout("users.txt");
+        for (string &l : lines)
+            fout << l << "\n";
+        fout.close();
+        cout << "Progress Saved!\n";
+    }
+
+    static bool loadFromFile(int cid, User &outUser)
+    {
+        ifstream file("users.txt");
+
+        if (!file)
+            return false;
+
+        string line;
+
+        while (getline(file, line))
+        {
+            if (line.empty())
+                continue;
+
+            istringstream ss(line);
+
+            string idStr, name, amountStr, luckStr, pointsStr;
+
+            getline(ss, idStr, '|');
+            getline(ss, name, '|');
+            getline(ss, amountStr, '|');
+            getline(ss, luckStr, '|');
+            getline(ss, pointsStr, '|');
+
+            if (idStr.empty() || name.empty() || amountStr.empty() ||
+                luckStr.empty() || pointsStr.empty())
+                continue;
+
+            int id;
+            float amount;
+            int luck, points;
+
+            try
+            {
+                id = stoi(idStr);
+                amount = stof(amountStr);
+                luck = stoi(luckStr);
+                points = stoi(pointsStr);
+            }
+            catch (...)
+            {
+                continue;
+            }
+
+            if (id == cid)
+            {
+                outUser = User(name, cid, amount, luck);
+                outUser.total_points = points;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    void logGame(string gameName, int betAmount, float result, int pts) const
+    {
+        ofstream log("history.txt", ios::app);
+        log << "CID:" << CID
+            << " | Game: " << gameName
+            << " | Bet: " << betAmount
+            << " | Result: " << (result >= 0 ? "WON " : "LOST ")
+            << abs(result)
+            << " | Points: " << pts
+            << "\n";
+        log.close();
+    }
+
+    static void showHistory(int cid)
+    {
+        ifstream file("history.txt");
+        string line;
+        bool found = false;
+        cout << "\n--- History for CID " << cid << " ---\n";
+        while (getline(file, line))
+        {
+            if (line.find("CID:" + to_string(cid)) != string::npos)
+            {
+                cout << line << "\n";
+                found = true;
+            }
+        }
+        if (!found)
+            cout << "No history found.\n";
+    }
 };
 class Game
 {
 protected:
     string gameName;
-    int points, bet;
+    int points = 0, bet;
     User *u = nullptr;
 
 public:
@@ -87,7 +267,12 @@ public:
         {
             int f = 1;
             cout << "Enter amount to bet :";
-            cin >> bet;
+            while (!(cin >> bet))
+            {
+                cout << "Invalid bet! Try again: ";
+                cin.clear();
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            }
             if (bet > u->getAmount())
             {
                 cout << "Insufficient Balance!!!\n";
@@ -122,7 +307,12 @@ public:
             {
                 bool f = 1;
                 cout << "Enter Your Guess :";
-                cin >> ch;
+                while (!(cin >> ch))
+                {
+                    cout << "Invalid input! Try again: ";
+                    cin.clear();
+                    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                }
                 if (ch < 2 || ch > 12)
                 {
                     cout << "Invalid Choice!!!\n";
@@ -131,7 +321,7 @@ public:
                 if (f)
                     break;
             }
-            playDiceRoll();
+            // playDiceRoll();
             int roll = dice(rng) + dice(rng);
             int chance = chance_list(rng);
             if (chance < (u->getLuck()))
@@ -142,13 +332,15 @@ public:
                     roll++;
                 roll = max(2, min(12, roll));
             }
-            cout << "Computer Roll :" << roll<<endl;
+            cout << "Computer Roll :" << roll << endl;
             if (abs(ch - roll) == 2)
             {
                 cout << "Close Guess!!!\nAmount Won = " << (bet + bet * 0.1) << "!!!\n";
                 u->updateAmount(bet * 0.1);
                 u->updateLuck(-20);
                 u->updateStreak(0);
+                u->updatetotalpoints(bet / 2);
+                u->logGame("Dice Guess", bet, bet * 0.1, bet / 2);
             }
             else if (abs(ch - roll) == 1)
             {
@@ -156,14 +348,18 @@ public:
                 u->updateAmount(bet * 0.15);
                 u->updateLuck(-35);
                 u->updateStreak(0);
+                u->updatetotalpoints(bet * 1);
+                u->logGame("Dice Guess", bet, bet * 0.15, bet * 1);
             }
             else if (ch == roll)
             {
-                playJackpot();
-                cout<<"Amount Won = " << (bet + bet * 0.5) << "!!!\n";
+                // playJackpot();
+                cout << "Amount Won = " << (bet + bet * 0.5) << "!!!\n";
                 u->updateAmount(bet * 0.5);
                 u->updateLuck(-80);
                 u->updateStreak(1);
+                u->updatetotalpoints(bet * 2);
+                u->logGame("Dice Guess", bet, bet * 0.5, bet * 2);
             }
             else
             {
@@ -171,66 +367,98 @@ public:
                 u->updateAmount(-bet);
                 u->updateLuck(20);
                 u->updateStreak(0);
+                u->updatetotalpoints(0);
+                u->logGame("Dice Guess", bet, -bet, 0);
             }
             cout << "Wanna Try Again ? I can sense the Luck Pumping!!! (Enter 1 for yes and 0 for no) :";
-            cin >> F;
+            while (!(cin >> F))
+            {
+                cout << "Invalid input! Try again: ";
+                cin.clear();
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            }
             if (F == 0)
                 break;
         }
     }
 };
-class slotMachine : public Game{
-    uniform_int_distribution <int> slot;
-    uniform_int_distribution <int> chance_list;
-    vector <string> symbols = {"1","2","3","4","5","6"};
-    public:
-    slotMachine(User &U) : slot(0,5), chance_list(0,99){
+class slotMachine : public Game
+{
+    uniform_int_distribution<int> slot;
+    uniform_int_distribution<int> chance_list;
+    vector<string> symbols = {"1", "2", "3", "4", "5", "6"};
+
+public:
+    slotMachine(User &U) : slot(0, 5), chance_list(0, 99)
+    {
         u = &U;
     }
-    void gameInfo(){
-        cout<<"Slot Machine!!!\nPlace the bet in the slot and check your luck\n";
+    void gameInfo()
+    {
+        cout << "Slot Machine!!!\nPlace the bet in the slot and check your luck\n";
     }
-    void playSlot(){
-        while(true){
+    void playSlot()
+    {
+        while (true)
+        {
             placeBet();
-            string a , b , c;
-            int A , B , C, F , chance = chance_list(rng);
+            string a, b, c;
+            int A, B, C, F, chance = chance_list(rng);
             A = slot(rng);
             a = symbols[A];
             B = slot(rng);
-            if(chance < u->getLuck()){
-                if(abs(B-A)>1) B=A;
+            if (chance < u->getLuck())
+            {
+                if (abs(B - A) > 1)
+                    B = A;
             }
             b = symbols[B];
             C = slot(rng);
-            if(chance < u->getLuck()){
-                if(abs(C-A)>1 && abs(B-C)>1) C=A;
+            if (chance < u->getLuck())
+            {
+                if (abs(C - A) > 1 && abs(B - C) > 1)
+                    C = A;
             }
             c = symbols[C];
-            playSlotMachine(a,b,c,symbols);
-            cout<<"\r"<<a<<" | "<<b<<" | "<<c<<endl;
-            if(a==b && b==c){
-                playJackpot();
-                cout<<"Won : "<<bet+bet*0.4<<endl;
-                u->updateAmount(bet*0.4);
+            // playSlotMachine(a, b, c, symbols);
+            cout << "\r" << a << " | " << b << " | " << c << endl;
+            if (a == b && b == c)
+            {
+                // playJackpot();
+                cout << "Won : " << bet + bet * 0.4 << endl;
+                u->updateAmount(bet * 0.4);
                 u->updateStreak(1);
                 u->updateLuck(-30);
+                u->updatetotalpoints(bet * 2);
+                u->logGame("Slot Machine", bet, bet * 0.4, bet * 2);
             }
-            else if(a==b || b==c || a==c){
-                cout<<"Very Close!!!\nWon : "<<bet+bet*0.1<<endl;
-                u->updateAmount(bet*0.1);
+            else if (a == b || b == c || a == c)
+            {
+                cout << "Very Close!!!\nWon : " << bet + bet * 0.1 << endl;
+                u->updateAmount(bet * 0.1);
                 u->updateStreak(0);
                 u->updateLuck(5);
+                u->updatetotalpoints(bet);
+                u->logGame("Slot Machine", bet, bet * 0.1, bet);
             }
-            else{
-                cout<<"The Next Spin holds a JACKPOT!\nLoss : "<<bet<<endl;
+            else
+            {
+                cout << "The Next Spin holds a JACKPOT!\nLoss : " << bet << endl;
                 u->updateAmount(-bet);
                 u->updateStreak(0);
                 u->updateLuck(15);
+                u->updatetotalpoints(0);
+                u->logGame("Slot Machine", bet, -bet, 0);
             }
-            cout<<"Wanna Play Again ? The Luck Engine is RUNNING!!! (Enter 1 for yes, 0 for no) :";
-            cin>>F;
-            if(!F){
+            cout << "Wanna Play Again ? The Luck Engine is RUNNING!!! (Enter 1 for yes, 0 for no) :";
+            while (!(cin >> F))
+            {
+                cout << "Invalid input! Try again: ";
+                cin.clear();
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            }
+            if (!F)
+            {
                 break;
             }
         }
@@ -249,10 +477,10 @@ class russian_roulete : public Game
 public:
     russian_roulete(User &U) : chamber(1, 6)
     {
-        u = &U ;
+        u = &U;
         playerHP = 3;
         opponentHP = 3;
-        luck_multiplier = 1.0 ;
+        luck_multiplier = 1.0;
     }
     void gameInfo() override
     {
@@ -261,8 +489,8 @@ public:
 
     void setBaseReward()
     {
-        this->placeBet() ;
-        basereward = bet ;
+        this->placeBet();
+        basereward = bet;
     }
 
     int getPlayerShot()
@@ -271,176 +499,211 @@ public:
         while (true)
         {
             cout << "\nENTER WHICH ROOM (1-6) TO SHOOT IN\n\n";
-            cin >> choice;
+            while (!(cin >> choice))
+            {
+                cout << "Invalid input! Try again: ";
+                cin.clear();
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            }
             if (choice >= 1 && choice <= 6)
                 break;
             cout << "Invalid choice! Try again.\n";
         }
 
-        return choice ;
+        return choice;
     }
 
     void repositionOpponent()
     {
-        opponentChambers.assign(6,0) ;
-        vector<int> temp = {1,2,3,4,5,6} ;
-        playReload();
-        shuffle(temp.begin() , temp.end() , rng ) ;
-        int x  =  temp[0] , y = temp[1] ;
-        opponentChambers[x-1] = 1 ;
-        opponentChambers[y-1] = 1 ;
+        opponentChambers.assign(6, 0);
+        vector<int> temp = {1, 2, 3, 4, 5, 6};
+        // playReload();
+        shuffle(temp.begin(), temp.end(), rng);
+        int x = temp[0], y = temp[1];
+        opponentChambers[x - 1] = 1;
+        opponentChambers[y - 1] = 1;
     }
 
-    bool evaluateShot() 
+    bool evaluateShot()
     {
-        playShoot();
-        if( opponentChambers[ player_chamber-1 ]  == 1){
-            return true ;
+        // playShoot();
+        if (opponentChambers[player_chamber - 1] == 1)
+        {
+            return true;
         }
-        else 
-            return false ;
+        else
+            return false;
     }
 
     void calculateLuckMultiplier()
     {
-        if( u->getLuck() > 65 )
+        if (u->getLuck() > 65)
         {
-            luck_multiplier = 1.5 ;
-        } 
+            luck_multiplier = 1.5;
+        }
 
-        else if(  u->getLuck() >= 35 && u->getLuck() <= 65 )
-            luck_multiplier = 1.0 ;
-        
-        else {
-            luck_multiplier = 0.9 ;
+        else if (u->getLuck() >= 35 && u->getLuck() <= 65)
+            luck_multiplier = 1.0;
+
+        else
+        {
+            luck_multiplier = 0.9;
         }
     }
 
     void resolveGame(bool playerWon)
     {
-        if(playerWon)
+        if (playerWon)
         {
-            u->updateAmount(basereward*luck_multiplier) ;
+            u->updateAmount(basereward * luck_multiplier);
             u->updateStreak(1);
             u->updateLuck(-30);
+            u->updatetotalpoints(bet * 2);
+            u->logGame("Russian Roulette", bet, basereward * luck_multiplier, bet * 2);
         }
 
         else
         {
-            u->updateAmount(-basereward) ;
+            u->updateAmount(-basereward);
             u->updateStreak(0);
             u->updateLuck(+20);
+            u->updatetotalpoints(0);
+            u->logGame("Russian Roulette", bet, -bet, 0);
         }
     }
 
     void resetGame()
     {
-        playerHP = 3 ;
-        opponentHP = 3 ;
-        opponentChambers.assign(6,0) ;
+        playerHP = 3;
+        opponentHP = 3;
+        opponentChambers.assign(6, 0);
     }
 
     void playRoulette()
     {
-        int replay  ;
-        while(true)
-    {
-            cout<<"\n\n" ;
-            this->gameInfo() ;
-            cout<< "\n\n" ;
-            this->setBaseReward() ;
-            cout << "\n\nGAME STARTING\n\n" ;
-            while(true)
+        int replay;
+        while (true)
+        {
+            cout << "\n\n";
+            this->gameInfo();
+            cout << "\n\n";
+            this->setBaseReward();
+            cout << "\n\nGAME STARTING\n\n";
+            while (true)
             {
-            cout << "PLAYER HP  :" << playerHP << endl ;
-            cout << "OPPONENT HP  :" << opponentHP << endl ;
-            this->repositionOpponent() ;
-            player_chamber = this->getPlayerShot() ;
-            if( this->evaluateShot() ) 
+                cout << "PLAYER HP  :" << playerHP << endl;
+                cout << "OPPONENT HP  :" << opponentHP << endl;
+                this->repositionOpponent();
+                player_chamber = this->getPlayerShot();
+                if (this->evaluateShot())
+                {
+                    cout << "\nOpponent loses HP\n";
+                    opponentHP--;
+                }
+                else
+                {
+                    cout << "\nPLayer loses HP\n";
+                    playerHP--;
+                }
+
+                if (playerHP == 0)
+                {
+                    this->resolveGame(0);
+                    cout << "\n!! PLAYER LOSES !! \n";
+                    cout << "\n AMOUNT LOST =  " << basereward << endl;
+                    break;
+                }
+
+                else if (opponentHP == 0)
+                {
+                    this->calculateLuckMultiplier();
+                    this->resolveGame(1);
+                    // playJackpot();
+                    cout << "\n AMOUNT WON =  " << basereward * luck_multiplier << endl;
+                    break;
+                }
+            }
+
+            this->resetGame();
+            cout << "\n\nWANT TO PLAY AGAIN PRESS 1 FOR YES 0 FOR NO\n\n";
+            while (!(cin >> replay))
             {
-                cout << "\nOpponent loses HP\n" ;
-                opponentHP-- ; 
+                cout << "Invalid input! Try again: ";
+                cin.clear();
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
             }
-            else
-            {
-                cout << "\nPLayer loses HP\n" ;
-                playerHP-- ;
-            }
-            
-            if(playerHP == 0)
-            {
-                this->resolveGame(0) ;
-                cout << "\n!! PLAYER LOSES !! \n" ;
-                cout << "\n AMOUNT LOST =  " << basereward  << endl ;
-                break ;
-            }
-            
-            else if( opponentHP == 0 )
-            {
-                this->calculateLuckMultiplier() ;
-                this->resolveGame(1) ;
-                playJackpot();
-                cout << "\n AMOUNT WON =  " << basereward*luck_multiplier  << endl ;
-                break ;
-            }
-            }
-        
-        this->resetGame() ;
-        cout << "\n\nWANT TO PLAY AGAIN PRESS 1 FOR YES 0 FOR NO\n\n" ;
-        cin >> replay ;
-        if(!replay) break ;
-        
+            if (!replay)
+                break;
         }
     }
-
 };
-class blackJack : public Game{
-    vector <int> cards = {1,2,3,4,5,6,7,8,9,10,11,12,13};
-    uniform_int_distribution <int> chance_list;
-    public:
-    void gameInfo(){
-        cout<<"Black Jacks!!!\nA card game where the computer and player has 2 cards and the card closest to 21 wins\n";
+class blackJack : public Game
+{
+    vector<int> cards = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13};
+    uniform_int_distribution<int> chance_list;
+
+public:
+    void gameInfo()
+    {
+        cout << "Black Jacks!!!\nA card game where the computer and player has 2 cards and the card closest to 21 wins\n";
     }
-    blackJack(User &U) : chance_list(0,99){
+    blackJack(User &U) : chance_list(0, 99)
+    {
         u = &U;
     }
-    string cardValue(int c){
-        if(c<11 && c>1) return to_string(c);
-        if(c==1) return ("Ace");
-        if(c==11) return ("Jack");
-        if(c==12) return ("Queen");
-        if(c==13) return ("King");
+    string cardValue(int c)
+    {
+        if (c < 11 && c > 1)
+            return to_string(c);
+        if (c == 1)
+            return ("Ace");
+        if (c == 11)
+            return ("Jack");
+        if (c == 12)
+            return ("Queen");
+        if (c == 13)
+            return ("King");
         return ("Out of Bounds");
     }
-    void checkAceSum(int &count, int &sum){
-        while(sum>21 && count>0){
+    void checkAceSum(int &count, int &sum)
+    {
+        while (sum > 21 && count > 0)
+        {
             sum -= 10;
             count--;
         }
     }
-    bool checkBlackJack(int card1, int card2){
-        if((card1 == 1 && (card2>10 && card2<14)) || (card2 == 1 && (card1>10 && card1 <14))) return 1;
+    bool checkBlackJack(int card1, int card2)
+    {
+        if ((card1 == 1 && (card2 > 10 && card2 < 14)) || (card2 == 1 && (card1 > 10 && card1 < 14)))
+            return 1;
         return 0;
     }
-    void playBlackJack(){
-        while(true){
+    void playBlackJack()
+    {
+        while (true)
+        {
             int player = 0, dealer = 0, choice, F, aceCountDealer = 0, aceCountPlayer = 0, p = 4, dBJ = 0, pBJ = 0;
             placeBet();
-            playShuffle();
+            // playShuffle();
             shuffle(cards.begin(), cards.end(), rng);
-            if(cards[0] ==1){
+            if (cards[0] == 1)
+            {
                 player += 10;
                 aceCountPlayer++;
             }
-            if(cards[2] ==1){
+            if (cards[2] == 1)
+            {
                 player += 10;
                 aceCountPlayer++;
             }
-            if(cards[1] ==1){
-                dealer +=10;
+            if (cards[1] == 1)
+            {
+                dealer += 10;
                 aceCountDealer++;
             }
-            if(cards[3] ==1){
+            if (cards[3] == 1)
+            {
                 dealer += 10;
                 aceCountDealer++;
             }
@@ -448,177 +711,449 @@ class blackJack : public Game{
             dealer += cards[1] + cards[3];
             pBJ = checkBlackJack(cards[0], cards[2]);
             dBJ = checkBlackJack(cards[1], cards[3]);
-            cout<<"Your cards :"<<cardValue(cards[0])<<" "<<cardValue(cards[2])<<endl;
-            cout<<"Dealer cards :"<<cardValue(cards[1])<<" Hidden\n";
-            if(pBJ && !dBJ){
-                cout<<"Black Jack!!!!";
-                playJackpot();
-                cout<<"Amount Won : "<<bet+bet*0.5<<endl;
-                u->updateAmount(bet*0.5);
+            cout << "Your cards :" << cardValue(cards[0]) << " " << cardValue(cards[2]) << endl;
+            cout << "Dealer cards :" << cardValue(cards[1]) << " Hidden\n";
+            if (pBJ && !dBJ)
+            {
+                cout << "Black Jack!!!!";
+                // playJackpot();
+                cout << "Amount Won : " << bet + bet * 0.5 << endl;
+                u->updateAmount(bet * 0.5);
                 u->updateStreak(1);
                 u->updateLuck(-35);
                 pBJ = 1;
+                u->updatetotalpoints(bet * 2);
+                u->logGame("Black Jack", bet, bet * 0.5, bet * 2);
             }
-            else if(!pBJ && dBJ){
-                cout<<"Dealer  hit Black Jack!!!\nAmount Lost : "<<bet<<endl;
+            else if (!pBJ && dBJ)
+            {
+                cout << "Dealer  hit Black Jack!!!\nAmount Lost : " << bet << endl;
                 u->updateAmount(-bet);
                 u->updateStreak(0);
                 u->updateLuck(20);
+                u->updatetotalpoints(0);
+                u->logGame("Black Jack", bet, -bet, 0);
             }
-            else if(pBJ && dBJ){
-                cout<<"Both Hit The Black Jack!!!\nDRAW!!!\n";
+            else if (pBJ && dBJ)
+            {
+                cout << "Both Hit The Black Jack!!!\nDRAW!!!\n";
             }
-            else{
-                while(true){
+            else
+            {
+                while (true)
+                {
                     int chance = chance_list(rng);
-                    while(true){
-                        cout<<"Enter you choice (1 to hit and 0 to stand) :";
-                        cin>>choice;
-                        if(choice == 1 || choice == 0 ) break;
-                        else cout<<"Invalid choice!!!\n";
+                    while (true)
+                    {
+                        cout << "Enter you choice (1 to hit and 0 to stand) :";
+                        while (!(cin >> choice))
+                        {
+                            cout << "Invalid input! Try again: ";
+                            cin.clear();
+                            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                        }
+                        if (choice == 1 || choice == 0)
+                            break;
+                        else
+                            cout << "Invalid choice!!!\n";
                     }
-                    if(!choice) break;
+                    if (!choice)
+                        break;
                     int c = cards[p];
-                    if(chance<u->getLuck() && rng()%2){
-                        if(player+c >21) c = rng()%7 + 2;
+                    if (chance < u->getLuck() && rng() % 2)
+                    {
+                        if (player + c > 21)
+                            c = rng() % 7 + 2;
                     }
-                    cout<<"Your card : "<<c<<endl;
+                    cout << "Your card : " << c << endl;
                     player += c;
-                    if(c == 1){
+                    if (c == 1)
+                    {
                         player += 10;
                         aceCountPlayer++;
                     }
                     p++;
                     checkAceSum(aceCountPlayer, player);
-                    cout<<"Your Cards :";
-                    for(int i = 0; i<p; i+=2) cout<<cardValue(cards[i])<<" ";
-                    cout<<endl;
-                    if(player>21) break;
+                    cout << "Your Cards :";
+                    for (int i = 0; i < p; i += 2)
+                        cout << cardValue(cards[i]) << " ";
+                    cout << endl;
+                    if (player > 21)
+                        break;
                 }
-                if(dealer<17){
-                    while(dealer<17){
+                if (dealer < 17)
+                {
+                    while (dealer < 17)
+                    {
                         int chance = chance_list(rng);
                         int C = cards[p];
-                        if(chance>u->getLuck() && rng()%2){
-                            if(dealer+C>21) C = rng()&4 + 2;
+                        if (chance > u->getLuck() && rng() % 2)
+                        {
+                            if (dealer + C > 21)
+                                C = rng() & 4 + 2;
                         }
                         dealer += C;
-                        if(C ==1){
+                        if (C == 1)
+                        {
                             dealer += 10;
                             aceCountDealer++;
                         }
                         p++;
-                        checkAceSum(aceCountDealer , dealer);
+                        checkAceSum(aceCountDealer, dealer);
                     }
-                    cout<<"Dealer Hits\n";
-                } 
-                else cout<<"Dealer Stand\n";
-                cout<<"Time to reveal cards\n";
-                cout<<"Dealer Sum : "<<dealer<<"\nPlayer Sum : "<<player<<endl;
-                if(player>21 || (player<dealer && dealer<21)){
-                    cout<<"Player Lost!\nAmount lost : "<<bet;
+                    cout << "Dealer Hits\n";
+                }
+                else
+                    cout << "Dealer Stand\n";
+                cout << "Time to reveal cards\n";
+                cout << "Dealer Sum : " << dealer << "\nPlayer Sum : " << player << endl;
+                if (player > 21 || (player < dealer && dealer < 21))
+                {
+                    cout << "Player Lost!\nAmount lost : " << bet;
                     u->updateAmount(-bet);
                     u->updateStreak(0);
                     u->updateLuck(20);
+                    u->updatetotalpoints(0);
+                    u->logGame("Black Jack", bet, -bet, 0);
                 }
-                else if(player>dealer || dealer>21){
-                    playJackpot();
-                    cout<<"Amount Won : "<<bet+bet*0.4<<endl;
-                    u->updateAmount(bet*0.4);
+                else if (player > dealer || dealer > 21)
+                {
+                    // playJackpot();
+                    cout << "Amount Won : " << bet + bet * 0.5 << endl;
+                    u->updateAmount(bet * 0.5);
                     u->updateStreak(1);
                     u->updateLuck(-30);
+                    u->updatetotalpoints(bet * 2);
+                    u->logGame("Black Jack", bet, bet * 0.5, bet * 2);
                 }
-                else if(player == dealer) cout<<"DRAW!!!!\n";
+                else if (player == dealer)
+                    cout << "DRAW!!!!\n";
             }
-            cout<<"Want to play again ?(1 for yes and 0 for no) : ";
-            cin>>F;
-            if(F==0) break;
+            cout << "Want to play again ?(1 for yes and 0 for no) : ";
+            while (!(cin >> F))
+            {
+                cout << "Invalid input! Try again: ";
+                cin.clear();
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            }
+            if (F == 0)
+                break;
         }
     }
 };
-class horseRace : public Game {
+class horseRace : public Game
+{
     uniform_real_distribution<float> speed_mod;
     vector<string> horses = {"Alpha", "Bravo", "Charlie", "Delta", "Echo"};
 
 public:
-    horseRace(User &U) : speed_mod(0.5, 2.0) {
+    horseRace(User &U) : speed_mod(0.5, 2.0)
+    {
         u = &U;
         gameName = "Thundering Hooves";
     }
 
-    void gameInfo() override {
+    void gameInfo() override
+    {
         cout << "\n--- HORSE RACE BETTING ---" << endl;
         cout << "Pick a horse:-\n1. Alpha\n2. Bravo\n3. Charlie\n4. Delta\n5. Echo.\nEach horse has a random performance." << endl;
         cout << "If your horse wins, you get 2.5x your bet!" << endl;
         cout << "High luck increases the chance of your horse getting a speed boost." << endl;
     }
 
-    void playRace() {
-        while (true) {
+    void playRace()
+    {
+        while (true)
+        {
             gameInfo();
             placeBet();
 
             int choice;
-            while (true) {
+            while (true)
+            {
                 cout << "Choose your horse\n1. Alpha\n2. Bravo\n3. Charlie\n4. Delta\n5. Echo\nEnter your choice : ";
-                cin >> choice;
-                if (choice >= 1 && choice <= 5) break;
+                while (!(cin >> choice))
+                {
+                    cout << "Invalid input! Try again: ";
+                    cin.clear();
+                    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                }
+                if (choice >= 1 && choice <= 5)
+                    break;
                 cout << "Invalid stable! Choose 1 to 5.\n";
             }
-            playShoot();
+            // playShoot();
             cout << "\nTHE RACE IS ON!\n";
-            playHorse();
+            //  playHorse();
             vector<float> progress(5, 0.0);
             bool raceFinished = false;
             int winner = -1;
-            while (!raceFinished) {
-                for (int i = 0; i < 5; i++) {
+            while (!raceFinished)
+            {
+                for (int i = 0; i < 5; i++)
+                {
                     float boost = speed_mod(rng);
-                    if (i == (choice - 1) && (rng() % 100 < u->getLuck())) {
-                        boost += 0.5; 
+                    if (i == (choice - 1) && (rng() % 100 < u->getLuck()))
+                    {
+                        boost += 0.5;
                     }
                     progress[i] += boost;
                     cout << horses[i] << " |";
                     int p = (int)progress[i];
-                    for (int j = 0; j < 20; j++) {
-                        if (j == p) cout << ">";
-                        else cout << "-";
+                    for (int j = 0; j < 20; j++)
+                    {
+                        if (j == p)
+                            cout << ">";
+                        else
+                            cout << "-";
                     }
                     cout << "| FINISH" << endl;
-                    if (progress[i] >= 20.0) {
+                    if (progress[i] >= 20.0)
+                    {
                         raceFinished = true;
                         winner = i;
                     }
                 }
-                if (!raceFinished) {
+                if (!raceFinished)
+                {
                     this_thread::sleep_for(chrono::milliseconds(200));
                     cout << "\033[5A";
                 }
             }
             cout << "\nWINNER: " << horses[winner] << "!\n";
-            if (winner == (choice - 1)) {
-                float reward = bet * 1.5; 
+            if (winner == (choice - 1))
+            {
+                float reward = bet * 1.5;
                 cout << "CHAMPION! You won " << (bet + reward) << "!" << endl;
                 u->updateAmount(reward);
                 u->updateLuck(-40);
                 u->updateStreak(1);
-            } else {
+                u->updatetotalpoints(bet * 2);
+                u->logGame("Horse Game", bet, bet * 1.5, bet * 2);
+            }
+            else
+            {
                 cout << "Better luck at the next track. Lost: " << bet << endl;
                 u->updateAmount(-bet);
                 u->updateLuck(15);
                 u->updateStreak(0);
+                u->updatetotalpoints(0);
+                u->logGame("Horse Game", bet, -bet, 0);
             }
             int F;
             cout << "Wanna visit the stables again? (1 for Yes, 0 for No): ";
-            cin >> F;
-            if (F == 0) break;
+            while (!(cin >> F))
+            {
+                cout << "Invalid input! Try again: ";
+                cin.clear();
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            }
+            if (F == 0)
+                break;
         }
     }
 };
-int main(){
-    User obj1("Ravi",101,20000);
-    horseRace obj(obj1);
-    obj.playRace();
-    diceGuess object(obj1);
-    object.playDiceGame();
+
+int main()
+{
+    int choice;
+    cout << "==============================\n";
+    cout << "   WELCOME TO THE CASINO!!\n";
+    cout << "==============================\n";
+    cout << "1. New User\n2. Load Existing User\nChoice: ";
+    while (!(cin >> choice))
+    {
+        cout << "Invalid input! Try again: ";
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    }
+
+    User *player = nullptr;
+
+    if (choice == 2)
+    {
+        int cid;
+        cout << "Enter your CID: ";
+        while (!(cin >> cid))
+        {
+            cout << "Invalid CID! Try again: ";
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        }
+
+        User temp("temp", cid, 0); // placeholder
+
+        if (User::loadFromFile(cid, temp))
+        {
+            cout << "Welcome back, " << temp.getCID() << "!\n";
+            player = new User(temp);
+        }
+        else
+        {
+            cout << "CID not found! Register? (1 Yes / 0 No): ";
+            int reg;
+            while (!(cin >> reg))
+            {
+                cout << "Invalid input! Try again: ";
+                cin.clear();
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            }
+
+            if (reg)
+            {
+                string name;
+                float balance;
+
+                cout << "Name: ";
+                getline(cin >> ws, name);
+
+                cout << "Balance: ";
+                while (!(cin >> balance))
+                {
+                    cout << "Invalid balance! Try again: ";
+                    cin.clear();
+                    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                }
+
+                player = new User(name, cid, balance);
+                player->saveToFile();
+            }
+            else
+            {
+                return 0;
+            }
+        }
+    }
+    else
+    {
+        string name;
+        int cid;
+        float balance;
+
+        cout << "Name: ";
+        getline(cin >> ws, name);
+        cout << "CID: ";
+        while (!(cin >> cid))
+        {
+            cout << "Invalid CID! Try again: ";
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        }
+        cout << "Balance: ";
+        while (!(cin >> balance))
+        {
+            cout << "Invalid balance! Try again: ";
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        }
+
+        player = new User(name, cid, balance);
+        player->saveToFile();
+    }
+
+    // Show history option
+    int h;
+    cout << "\nView your game history? (1 Yes / 0 No): ";
+    while (!(cin >> h))
+    {
+        cout << "Invalid input! Try again: ";
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    }
+    if (h)
+        User::showHistory(player->getCID());
+
+    // Game loop
+    while (true)
+    {
+        cout << "\n==============================\n";
+        cout << "        GAME MENU\n";
+        cout << "==============================\n";
+        cout << "Balance : " << player->getAmount() << "\n";
+        cout << "Points  : " << player->gettotalpoints() << "\n";
+        cout << "Luck    : " << player->getLuck() << "\n";
+        cout << "------------------------------\n";
+        cout << "1. Dice Guess\n";
+        cout << "2. Slot Machine\n";
+        cout << "3. Russian Roulette\n";
+        cout << "4. Black Jack\n";
+        cout << "5. Horse Race\n";
+        cout << "6. View History\n";
+        cout << "0. Exit\n";
+        cout << "Choose a game: ";
+
+        int gameChoice;
+        while (!(cin >> gameChoice))
+        {
+            cout << "Invalid choice! Try again: ";
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        }
+
+        if (gameChoice == 0)
+            break;
+
+        switch (gameChoice)
+        {
+        case 1:
+        {
+            diceGuess dg(*player);
+            dg.playDiceGame();
+            break;
+        }
+        case 2:
+        {
+            slotMachine sm(*player);
+            sm.playSlot();
+            break;
+        }
+        case 3:
+        {
+            russian_roulete rr(*player);
+            rr.playRoulette();
+            break;
+        }
+        case 4:
+        {
+            blackJack bj(*player);
+            bj.playBlackJack();
+            break;
+        }
+        case 5:
+        {
+            horseRace hr(*player);
+            hr.playRace();
+            break;
+        }
+        case 6:
+        {
+            User::showHistory(player->getCID());
+            break;
+        }
+        default:
+            cout << "Invalid choice!\n";
+        }
+
+        // Auto-save
+        player->saveToFile();
+
+        if (player->getAmount() <= 0)
+        {
+            cout << "\nYou're out of balance! Game Over.\n";
+            break;
+        }
+    }
+
+    // Summary
+    cout << "\n==============================\n";
+    cout << "        SESSION SUMMARY\n";
+    cout << "==============================\n";
+    cout << "Final Balance : " << player->getAmount() << "\n";
+    cout << "Total Points  : " << player->gettotalpoints() << "\n";
+    cout << "Luck          : " << player->getLuck() << "\n";
+
+    player->saveToFile();
+    delete player;
+
+    return 0;
 }
