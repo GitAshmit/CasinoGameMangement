@@ -6,8 +6,8 @@
 #include <chrono>
 #include <thread>
 #include <algorithm>
-// #include <SFML/Audio.hpp>
-// #include "audio.h"
+#include <SFML/Audio.hpp>
+#include "audio.h"
 #include <fstream>
 #include <sstream>
 #include <limits>
@@ -86,7 +86,6 @@ public:
         string line;
         bool found = false;
 
-        // Read all existing lines
         while (getline(fin, line))
         {
             if (line.empty())
@@ -101,7 +100,6 @@ public:
             getline(ss, luckStr, '|');
             getline(ss, pointsStr, '|');
 
-            // Validate fields
             if (idStr.empty() || name.empty() || amountStr.empty() ||
                 luckStr.empty() || pointsStr.empty())
             {
@@ -121,12 +119,12 @@ public:
             }
             catch (...)
             {
-                continue; // skip corrupted line
+                continue;
             }
 
             if (id == CID)
             {
-                // Replace current user
+
                 lines.push_back(to_string(CID) + "|" + name + "|" +
                                 to_string(amountWon) + "|" +
                                 to_string(luck) + "|" +
@@ -135,13 +133,12 @@ public:
             }
             else
             {
-                // Keep only VALID lines
+
                 lines.push_back(line);
             }
         }
         fin.close();
 
-        // If user wasn't in file yet, add them
         if (!found)
         {
             lines.push_back(to_string(CID) + "|" + name + "|" +
@@ -150,7 +147,6 @@ public:
                             to_string(total_points));
         }
 
-        // Write everything back
         ofstream fout("users.txt");
         for (string &l : lines)
             fout << l << "\n";
@@ -321,7 +317,7 @@ public:
                 if (f)
                     break;
             }
-            // playDiceRoll();
+            playDiceRoll();
             int roll = dice(rng) + dice(rng);
             int chance = chance_list(rng);
             if (chance < (u->getLuck()))
@@ -353,7 +349,7 @@ public:
             }
             else if (ch == roll)
             {
-                // playJackpot();
+                playJackpot();
                 cout << "Amount Won = " << (bet + bet * 0.5) << "!!!\n";
                 u->updateAmount(bet * 0.5);
                 u->updateLuck(-80);
@@ -420,11 +416,11 @@ public:
                     C = A;
             }
             c = symbols[C];
-            // playSlotMachine(a, b, c, symbols);
+            playSlotMachine(a, b, c, symbols);
             cout << "\r" << a << " | " << b << " | " << c << endl;
             if (a == b && b == c)
             {
-                // playJackpot();
+                playJackpot();
                 cout << "Won : " << bet + bet * 0.4 << endl;
                 u->updateAmount(bet * 0.4);
                 u->updateStreak(1);
@@ -517,7 +513,7 @@ public:
     {
         opponentChambers.assign(6, 0);
         vector<int> temp = {1, 2, 3, 4, 5, 6};
-        // playReload();
+        playReload();
         shuffle(temp.begin(), temp.end(), rng);
         int x = temp[0], y = temp[1];
         opponentChambers[x - 1] = 1;
@@ -526,7 +522,7 @@ public:
 
     bool evaluateShot()
     {
-        // playShoot();
+        playShoot();
         if (opponentChambers[player_chamber - 1] == 1)
         {
             return true;
@@ -618,7 +614,7 @@ public:
                 {
                     this->calculateLuckMultiplier();
                     this->resolveGame(1);
-                    // playJackpot();
+                    playJackpot();
                     cout << "\n AMOUNT WON =  " << basereward * luck_multiplier << endl;
                     break;
                 }
@@ -716,7 +712,7 @@ public:
             if (pBJ && !dBJ)
             {
                 cout << "Black Jack!!!!";
-                // playJackpot();
+                playJackpot();
                 cout << "Amount Won : " << bet + bet * 0.5 << endl;
                 u->updateAmount(bet * 0.5);
                 u->updateStreak(1);
@@ -818,7 +814,7 @@ public:
                 }
                 else if (player > dealer || dealer > 21)
                 {
-                    // playJackpot();
+                    playJackpot();
                     cout << "Amount Won : " << bet + bet * 0.5 << endl;
                     u->updateAmount(bet * 0.5);
                     u->updateStreak(1);
@@ -882,9 +878,9 @@ public:
                     break;
                 cout << "Invalid stable! Choose 1 to 5.\n";
             }
-            // playShoot();
+            playShoot();
             cout << "\nTHE RACE IS ON!\n";
-            //  playHorse();
+            playHorse();
             vector<float> progress(5, 0.0);
             bool raceFinished = false;
             int winner = -1;
@@ -981,7 +977,7 @@ int main()
             cin.ignore(numeric_limits<streamsize>::max(), '\n');
         }
 
-        User temp("temp", cid, 0); // placeholder
+        User temp("temp", cid, 0);
 
         if (User::loadFromFile(cid, temp))
         {
@@ -1051,7 +1047,6 @@ int main()
         player->saveToFile();
     }
 
-    // Show history option
     int h;
     cout << "\nView your game history? (1 Yes / 0 No): ";
     while (!(cin >> h))
@@ -1134,7 +1129,6 @@ int main()
             cout << "Invalid choice!\n";
         }
 
-        // Auto-save
         player->saveToFile();
 
         if (player->getAmount() <= 0)
@@ -1144,7 +1138,6 @@ int main()
         }
     }
 
-    // Summary
     cout << "\n==============================\n";
     cout << "        SESSION SUMMARY\n";
     cout << "==============================\n";
