@@ -274,6 +274,10 @@ public:
                 cout << "Insufficient Balance!!!\n";
                 f = 0;
             }
+            if(bet<10 || bet%10!=0){
+                cout<<"Bet should be greater than 10 and should be a multiple of 10\n";
+                f = 0;
+            }
             if (f)
                 break;
         }
@@ -292,6 +296,7 @@ public:
     diceGuess(User &U) : dice(1, 6), chance_list(0, 99)
     {
         u = &U;
+        gameName = "Dice Guess";
     }
     void playDiceGame()
     {
@@ -388,6 +393,7 @@ public:
     slotMachine(User &U) : slot(0, 5), chance_list(0, 99)
     {
         u = &U;
+        gameName = "Slot Machine";
     }
     void gameInfo()
     {
@@ -477,6 +483,7 @@ public:
         playerHP = 3;
         opponentHP = 3;
         luck_multiplier = 1.0;
+        gameName = "Russian Roulete";
     }
     void gameInfo() override
     {
@@ -641,11 +648,12 @@ class blackJack : public Game
 public:
     void gameInfo()
     {
-        cout << "Black Jacks!!!\nA card game where the computer and player has 2 cards and the card closest to 21 wins\n";
+        cout << "Black Jacks!!!\nA card game where the computer and player has 2 cards and the card closest to 21 wins but if you cross it you lose all your money!!!\n";
     }
     blackJack(User &U) : chance_list(0, 99)
     {
         u = &U;
+        gameName = "Black Jacks";
     }
     string cardValue(int c)
     {
@@ -681,8 +689,8 @@ public:
         {
             int player = 0, dealer = 0, choice, F, aceCountDealer = 0, aceCountPlayer = 0, p = 4, dBJ = 0, pBJ = 0;
             placeBet();
-            // playShuffle();
             shuffle(cards.begin(), cards.end(), rng);
+            playShuffle();
             if (cards[0] == 1)
             {
                 player += 10;
@@ -761,7 +769,7 @@ public:
                         if (player + c > 21)
                             c = rng() % 7 + 2;
                     }
-                    cout << "Your card : " << c << endl;
+                    cout << "Drawed Card : " << cardValue(c) << endl;
                     player += c;
                     if (c == 1)
                     {
@@ -805,7 +813,7 @@ public:
                 cout << "Dealer Sum : " << dealer << "\nPlayer Sum : " << player << endl;
                 if (player > 21 || (player < dealer && dealer < 21))
                 {
-                    cout << "Player Lost!\nAmount lost : " << bet;
+                    cout << "Player Lost!\nAmount lost : " << bet<<endl;
                     u->updateAmount(-bet);
                     u->updateStreak(0);
                     u->updateLuck(20);
@@ -879,6 +887,7 @@ public:
                 cout << "Invalid stable! Choose 1 to 5.\n";
             }
             playShoot();
+            this_thread::sleep_for(chrono::seconds(1));
             cout << "\nTHE RACE IS ON!\n";
             playHorse();
             vector<float> progress(5, 0.0);
@@ -920,7 +929,8 @@ public:
             if (winner == (choice - 1))
             {
                 float reward = bet * 1.5;
-                cout << "CHAMPION! You won " << (bet + reward) << "!" << endl;
+                playJackpot();
+                cout << "You won " << (bet + reward) << "!" << endl;
                 u->updateAmount(reward);
                 u->updateLuck(-40);
                 u->updateStreak(1);

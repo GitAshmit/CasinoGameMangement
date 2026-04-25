@@ -14,7 +14,7 @@ void playJackpot(){
     static sf::SoundBuffer buffer1;
     static sf::SoundBuffer buffer2;
     static sf::SoundBuffer buffer3;
-    bool load1 = false, load2 = false, load3 = false;
+    static bool load1 = false, load2 = false, load3 = false;
     int r = jack(Rng);
     cout<<"\n-----------\nJACKPOT!!!!!\n-----------\n";
     if(r == 1){
@@ -39,7 +39,7 @@ void playJackpot(){
         }
         sf::Sound sound(buffer2);
         sound.play();
-        while(sound.getStatus() == sf::Sound::Status::Playing) sf::sleep(sf::milliseconds(100));
+        while(sound.getStatus() == sf::Sound::Status::Playing) sf::sleep(sf::milliseconds(90));
     }
     else{
         if(!load3){
@@ -51,13 +51,13 @@ void playJackpot(){
         }
         sf::Sound sound(buffer3);
         sound.play();
-        while(sound.getStatus() == sf::Sound::Status::Playing) sf::sleep(sf::milliseconds(100));
+        while(sound.getStatus() == sf::Sound::Status::Playing) sf::sleep(sf::milliseconds(90));
     }
     
 }
 void playShoot(){
     static sf::SoundBuffer buffer;
-    bool load = false;
+    static bool load = false;
     if(!load){
         if(!buffer.loadFromFile("Sounds/Shoot.wav")){
             cout<<"Failed to load shoot audio\n";
@@ -73,7 +73,7 @@ void playShoot(){
 } 
 void playReload(){
     static sf::SoundBuffer buffer;
-    bool load = false;
+    static bool load = false;
     if(!load){
         if(!buffer.loadFromFile("Sounds/Reload.wav")){
             cout<<"Failed to load reload sound\n";
@@ -87,7 +87,7 @@ void playReload(){
 }
 void playDiceRoll(){
     static sf::SoundBuffer buffer;
-    bool load = false;
+    static bool load = false;
     if(!load){
         if(!buffer.loadFromFile("Sounds/Dice_Roll.wav")){
             cout<<"Failed to load roll sound\n";
@@ -102,7 +102,7 @@ void playDiceRoll(){
 void playSlotMachine(string a, string b, string c,vector <string> &symbols){
     uniform_int_distribution <int> slot(0,symbols.size()-1);
     static sf::SoundBuffer buffer;
-    bool load = false;
+    static bool load = false;
     if(!load){
         if(!buffer.loadFromFile("Sounds/slot_machine.wav")){
             cout<<"Failed to load slot machine sound\n";
@@ -118,16 +118,16 @@ void playSlotMachine(string a, string b, string c,vector <string> &symbols){
     }
     for(int i =0; i<5; i++){
         cout<<"\r"<<a<<" | "<<symbols[slot(Rng)]<<" | "<<symbols[slot(Rng)]<<flush;
-        this_thread::sleep_for(chrono::milliseconds(100));
+        this_thread::sleep_for(chrono::milliseconds(150));
     }
     for(int i =0; i<5; i++){
         cout<<"\r"<<a<<" | "<<b<<" | "<<symbols[slot(Rng)]<<flush;
-        this_thread::sleep_for(chrono::milliseconds(100));
+        this_thread::sleep_for(chrono::milliseconds(170));
     }
 }
 void playShuffle(){
     static sf::SoundBuffer buffer;
-    bool load = false;
+    static bool load = false;
     if(!load){
         if(!buffer.loadFromFile("Sounds/shuffle.wav")){
             cout<<"Failed to load shuffle\n";
@@ -141,7 +141,7 @@ void playShuffle(){
 }
 void playHorse(){
     static sf::SoundBuffer buffer;
-    bool load = false;
+    static bool load = false;
     if(!load){
         if(!buffer.loadFromFile("Sounds/horse.wav")){
             cout<<"Failed to load horse neigh sound\n";
