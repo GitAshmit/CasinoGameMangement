@@ -247,8 +247,15 @@ public:
     {
         double x;
         int ch;
-        cout << "Enter amount :";
-        cin >> x;
+        while (true)
+        {
+            cout << "Enter amount: ";
+            if (cin >> x && x > 0)
+                break;
+            cout << "Invalid! Enter a positive number: ";
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        }
         cout << "Enter method of payment :\n1.Card\n2.Cash\n3.Paypall\n";
         while (true)
         {
@@ -993,7 +1000,6 @@ public:
                         boost += 0.5;
                     }
                     progress[i] += boost;
-                    int p = min((int)progress[i], 19);
                     cout << horses[i] << " |";
                     int p = (int)progress[i];
                     for (int j = 0; j < 20; j++)
