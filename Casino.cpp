@@ -92,15 +92,15 @@ public:
                 continue;
 
             istringstream ss(line);
-            string idStr, name, amountStr, luckStr, pointsStr;
+            string idStr, filename, amountStr, luckStr, pointsStr;
 
             getline(ss, idStr, '|');
-            getline(ss, name, '|');
+            getline(ss, filename, '|');
             getline(ss, amountStr, '|');
             getline(ss, luckStr, '|');
             getline(ss, pointsStr, '|');
 
-            if (idStr.empty() || name.empty() || amountStr.empty() ||
+            if (idStr.empty() || filename.empty() || amountStr.empty() ||
                 luckStr.empty() || pointsStr.empty())
             {
                 continue;
@@ -125,7 +125,7 @@ public:
             if (id == CID)
             {
 
-                lines.push_back(to_string(CID) + "|" + name + "|" +
+                lines.push_back(to_string(CID) + "|" + this->name + "|" +
                                 to_string(amountWon) + "|" +
                                 to_string(luck) + "|" +
                                 to_string(total_points));
@@ -141,7 +141,7 @@ public:
 
         if (!found)
         {
-            lines.push_back(to_string(CID) + "|" + name + "|" +
+            lines.push_back(to_string(CID) + "|" + this->name + "|" +
                             to_string(amountWon) + "|" +
                             to_string(luck) + "|" +
                             to_string(total_points));
@@ -277,6 +277,46 @@ public:
         }
         amountWon +=x;
     }
+    static int generateCID()
+    {
+        static mt19937 gen(random_device{}());
+        uniform_int_distribution<int> dist(1000, 9999); // 4-digit CID
+        return dist(gen);
+    }
+
+    static bool cidExists(int cid)
+    {
+        ifstream file("users.txt");
+        string line;
+
+        while (getline(file, line))
+        {
+            istringstream ss(line);
+            string idStr;
+            getline(ss, idStr, '|');
+
+            try
+            {
+                if (stoi(idStr) == cid)
+                    return true;
+            }
+            catch (...)
+            {
+            }
+        }
+        return false;
+    }
+
+    static int generateUniqueCID()
+    {
+        int cid;
+        do
+        {
+            cid = generateCID();
+        } while (cidExists(cid));
+
+        return cid;
+    }
 };
 class Game
 {
@@ -312,8 +352,9 @@ public:
                 cout << "Insufficient Balance!!!\n";
                 f = 0;
             }
-            if(bet<10 || bet%10!=0){
-                cout<<"Bet should be greater than 10 and should be a multiple of 10\n";
+            if (bet < 10 || bet % 10 != 0)
+            {
+                cout << "Bet should be greater than 10 and should be a multiple of 10\n";
                 f = 0;
             }
             if (f)
@@ -851,7 +892,7 @@ public:
                 cout << "Dealer Sum : " << dealer << "\nPlayer Sum : " << player << endl;
                 if (player > 21 || (player < dealer && dealer < 21))
                 {
-                    cout << "Player Lost!\nAmount lost : " << bet<<endl;
+                    cout << "Player Lost!\nAmount lost : " << bet << endl;
                     u->updateAmount(-bet);
                     u->updateStreak(0);
                     u->updateLuck(20);
@@ -1018,12 +1059,7 @@ int main()
     {
         int cid;
         cout << "Enter your CID: ";
-        while (!(cin >> cid))
-        {
-            cout << "Invalid CID! Try again: ";
-            cin.clear();
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
-        }
+        cin >> cid;
 
         User temp("temp", cid, 0);
 
@@ -1059,6 +1095,8 @@ int main()
                     cin.ignore(numeric_limits<streamsize>::max(), '\n');
                 }
 
+                int newCID = User::generateUniqueCID();
+                cout << "Your new CID is: " << newCID << endl;
                 player = new User(name, cid, balance);
                 player->saveToFile();
             }
@@ -1071,18 +1109,13 @@ int main()
     else
     {
         string name;
-        int cid;
         float balance;
 
         cout << "Name: ";
         getline(cin >> ws, name);
         cout << "CID: ";
-        while (!(cin >> cid))
-        {
-            cout << "Invalid CID! Try again: ";
-            cin.clear();
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
-        }
+        int cid = User::generateUniqueCID();
+        cout << "Your generated CID is: " << cid << endl;
         cout << "Balance: ";
         while (!(cin >> balance))
         {
