@@ -402,10 +402,10 @@ public:
             while (true)
             {
                 bool f = 1;
-                cout << "Enter Your Guess :";
+                cout << "Enter Your Guess(2-12) :";
                 while (!(cin >> ch))
                 {
-                    cout << "Invalid input! Try again: ";
+                    cout << "Invalid Guess! Try again: ";
                     cin.clear();
                     cin.ignore(numeric_limits<streamsize>::max(), '\n');
                 }
@@ -599,7 +599,7 @@ public:
             cout << "\nENTER WHICH ROOM (1-6) TO SHOOT IN\n\n";
             while (!(cin >> choice))
             {
-                cout << "Invalid input! Try again: ";
+                cout << "Invalid Room! Try again: ";
                 cin.clear();
                 cin.ignore(numeric_limits<streamsize>::max(), '\n');
             }
@@ -782,7 +782,7 @@ public:
     {
         while (true)
         {
-            int player = 0, dealer = 0, choice, F, aceCountDealer = 0, aceCountPlayer = 0, p = 4, dBJ = 0, pBJ = 0;
+            int player = 0, dealer = 0, choice, F, aceCountDealer = 0, aceCountPlayer = 0, p = 4, dBJ = 0, pBJ = 0, P = 5;
             placeBet();
             shuffle(cards.begin(), cards.end(), rng);
             playShuffle();
@@ -885,7 +885,7 @@ public:
                     while (dealer < 17)
                     {
                         int chance = chance_list(rng);
-                        int C = cards[p];
+                        int C = cards[P];
                         if (chance > u->getLuck() && rng() % 2)
                         {
                             if (dealer + C > 21)
@@ -897,7 +897,7 @@ public:
                             dealer += 10;
                             aceCountDealer++;
                         }
-                        p++;
+                        P++;
                         checkAceSum(aceCountDealer, dealer);
                     }
                     cout << "Dealer Hits\n";
