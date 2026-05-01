@@ -75,9 +75,13 @@ public:
         total_points = max(0, total_points + p);
     }
 
+    void settotalpoints(int p) { total_points = p; }
+
     int gettotalpoints() const { return total_points; }
 
     int getCID() const { return CID; }
+
+    string getName() const { return name; }
 
     void saveToFile() const
     {
@@ -201,7 +205,7 @@ public:
             if (id == cid)
             {
                 outUser = User(name, cid, amount, luck);
-                outUser.total_points = points;
+                outUser.settotalpoints(points);
                 return true;
             }
         }
@@ -239,43 +243,48 @@ public:
         if (!found)
             cout << "No history found.\n";
     }
-    void addBalance(){
+    void addBalance()
+    {
         double x;
         int ch;
-        cout<<"Enter amount :";
-        cin>>x;
-        cout<<"Enter method of payment :\n1.Card\n2.Cash\n3.Paypall\n";
-        while(true){
-            cin>>ch;
-            if(x>0 && x<4) break;
-            else cout<<"Invalid choice please re-input :";
+        cout << "Enter amount :";
+        cin >> x;
+        cout << "Enter method of payment :\n1.Card\n2.Cash\n3.Paypall\n";
+        while (true)
+        {
+            cin >> ch;
+            if (ch > 0 && ch < 4)
+                break;
+            else
+                cout << "Invalid choice please re-input :";
         }
-        switch (ch){
-            case 1:
+        switch (ch)
+        {
+        case 1:
             int cardn, cardpin;
-            cout<<"Enter card number and card pin :";
-            cin>>cardn>>cardpin;
-            cout<<"Processing....\n";
+            cout << "Enter card number and card pin :";
+            cin >> cardn >> cardpin;
+            cout << "Processing....\n";
             this_thread::sleep_for(chrono::milliseconds(50));
-            cout<<"Payment succesfull !!!\n";
+            cout << "Payment succesfull !!!\n";
             break;
 
-            case 2:
+        case 2:
             int age;
-            cout<<"Enter your legal age :";
-            cin>>age;
-            cout<<"Payment succesfull !!!\n";
+            cout << "Enter your legal age :";
+            cin >> age;
+            cout << "Payment succesfull !!!\n";
             break;
 
-            case 3:
+        case 3:
             int acc;
-            cout<<"Enter account number and further continue on you phone :";
-            cin>>acc;
-            cout<<"Processing....\n";
+            cout << "Enter account number and further continue on you phone :";
+            cin >> acc;
+            cout << "Processing....\n";
             this_thread::sleep_for(chrono::milliseconds(50));
-            cout<<"Payment succesfull !!!\n";
+            cout << "Payment succesfull !!!\n";
         }
-        amountWon +=x;
+        amountWon += x;
     }
     static int generateCID()
     {
@@ -873,7 +882,7 @@ public:
                         if (chance > u->getLuck() && rng() % 2)
                         {
                             if (dealer + C > 21)
-                                C = rng() & 4 + 2;
+                                C = rng() % 4 + 2;
                         }
                         dealer += C;
                         if (C == 1)
@@ -976,12 +985,15 @@ public:
             {
                 for (int i = 0; i < 5; i++)
                 {
+                    if (raceFinished)
+                        break;
                     float boost = speed_mod(rng);
                     if (i == (choice - 1) && (rng() % 100 < u->getLuck()))
                     {
                         boost += 0.5;
                     }
                     progress[i] += boost;
+                    int p = min((int)progress[i], 19);
                     cout << horses[i] << " |";
                     int p = (int)progress[i];
                     for (int j = 0; j < 20; j++)
@@ -992,7 +1004,7 @@ public:
                             cout << "-";
                     }
                     cout << "| FINISH" << endl;
-                    if (progress[i] >= 20.0)
+                    if (progress[i] >= 20.0 && !raceFinished)
                     {
                         raceFinished = true;
                         winner = i;
@@ -1065,7 +1077,7 @@ int main()
 
         if (User::loadFromFile(cid, temp))
         {
-            cout << "Welcome back, " << temp.getCID() << "!\n";
+            cout << "Welcome back, " << temp.getName() << "!\n";
             player = new User(temp);
         }
         else
@@ -1097,7 +1109,7 @@ int main()
 
                 int newCID = User::generateUniqueCID();
                 cout << "Your new CID is: " << newCID << endl;
-                player = new User(name, cid, balance);
+                player = new User(name, newCID, balance);
                 player->saveToFile();
             }
             else
@@ -1147,7 +1159,6 @@ int main()
         cout << "==============================\n";
         cout << "Balance : " << player->getAmount() << "\n";
         cout << "Points  : " << player->gettotalpoints() << "\n";
-        cout << "Luck    : " << player->getLuck() << "\n";
         cout << "------------------------------\n";
         cout << "1. Dice Guess\n";
         cout << "2. Slot Machine\n";
@@ -1224,7 +1235,6 @@ int main()
     cout << "==============================\n";
     cout << "Final Balance : " << player->getAmount() << "\n";
     cout << "Total Points  : " << player->gettotalpoints() << "\n";
-    cout << "Luck          : " << player->getLuck() << "\n";
 
     player->saveToFile();
     delete player;
