@@ -239,6 +239,44 @@ public:
         if (!found)
             cout << "No history found.\n";
     }
+    void addBalance(){
+        double x;
+        int ch;
+        cout<<"Enter amount :";
+        cin>>x;
+        cout<<"Enter method of payment :\n1.Card\n2.Cash\n3.Paypall\n";
+        while(true){
+            cin>>ch;
+            if(x>0 && x<4) break;
+            else cout<<"Invalid choice please re-input :";
+        }
+        switch (ch){
+            case 1:
+            int cardn, cardpin;
+            cout<<"Enter card number and card pin :";
+            cin>>cardn>>cardpin;
+            cout<<"Processing....\n";
+            this_thread::sleep_for(chrono::milliseconds(50));
+            cout<<"Payment succesfull !!!\n";
+            break;
+
+            case 2:
+            int age;
+            cout<<"Enter your legal age :";
+            cin>>age;
+            cout<<"Payment succesfull !!!\n";
+            break;
+
+            case 3:
+            int acc;
+            cout<<"Enter account number and further continue on you phone :";
+            cin>>acc;
+            cout<<"Processing....\n";
+            this_thread::sleep_for(chrono::milliseconds(50));
+            cout<<"Payment succesfull !!!\n";
+        }
+        amountWon +=x;
+    }
 };
 class Game
 {
