@@ -4,3 +4,13 @@ CID:7149 | Game: Russian Roulette | Bet: 50 | Result: LOST 50 | Points: 0
 CID:7149 | Game: Russian Roulette | Bet: 50 | Result: LOST 50 | Points: 0
 CID:7149 | Game: Dice Guess | Bet: 50 | Result: WON 5 | Points: 25
 CID:7149 | Game: Horse Game | Bet: 50 | Result: WON 75 | Points: 100
+CID:5263 | Game: Dice Guess | Bet: 50 | Result: LOST 50 | Points: 0
+CID:5263 | Game: Slot Machine | Bet: 50 | Result: WON 5 | Points: 50
+CID:5263 | Game: Russian Roulette | Bet: 50 | Result: WON 50 | Points: 100
+CID:5263 | Game: Black Jack | Bet: 50 | Result: LOST 50 | Points: 0
+CID:5263 | Game: Horse Game | Bet: 50 | Result: WON 75 | Points: 100
+CID:5263 | Game: Dice Guess | Bet: 50 | Result: LOST 50 | Points: 0
+CID:5263 | Game: Slot Machine | Bet: 50 | Result: LOST 50 | Points: 0
+CID:5263 | Game: Russian Roulette | Bet: 50 | Result: LOST 50 | Points: 0
+CID:5263 | Game: Black Jack | Bet: 50 | Result: LOST 50 | Points: 0
+CID:5263 | Game: Horse Game | Bet: 50 | Result: WON 75 | Points: 100

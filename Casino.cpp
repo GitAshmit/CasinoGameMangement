@@ -386,7 +386,7 @@ class diceGuess : public Game
 public:
     void gameInfo()
     {
-        cout << "Dice Guessing!!!\nIn this game the computer would roll 2 dice and a user is asked for a choice between 2 to 12 if the Choice matches the user wins 50% of the bet\n";
+        cout << "\nDice Guessing!!!\nIn this game the computer would roll 2 dice and a user is asked for a choice between 2 to 12 if the Choice matches the user wins 50% of the bet\n";
     }
     diceGuess(User &U) : dice(1, 6), chance_list(0, 99)
     {
@@ -395,6 +395,7 @@ public:
     }
     void playDiceGame()
     {
+        gameInfo();
         while (true)
         {
             placeBet();
@@ -492,10 +493,11 @@ public:
     }
     void gameInfo()
     {
-        cout << "Slot Machine!!!\nPlace the bet in the slot and check your luck\n";
+        cout << "\nSlot Machine!!!\nPlace the bet in the slot and check your luck\n";
     }
     void playSlot()
     {
+        gameInfo();
         while (true)
         {
             placeBet();
@@ -582,7 +584,7 @@ public:
     }
     void gameInfo() override
     {
-        cout << "\nBOTH PLAYER AND COMPUTER HAVE 3 HEALTH POINTS PLAYER HAVE TO SHOOT THE COMPUTER 3 TIMES TO WIN THE GAME \nCOMPUTER WILL BE PRESENT IN 2 OUT 6 ROOMS !!\n ";
+        cout << "\nRussian Roulete!!!\nThis Is A Modified Roulete Game, Both Player And Computer Have 3 Health Points Player Have To Shoot The Computer 3 Times To Win The Game \ncomputer Will Be Present In 2 Out 6 Rooms !!\n ";
     }
 
     void setBaseReward()
@@ -743,7 +745,7 @@ class blackJack : public Game
 public:
     void gameInfo()
     {
-        cout << "Black Jacks!!!\nA card game where the computer and player has 2 cards and the card closest to 21 wins but if you cross it you lose all your money!!!\n";
+        cout << "Black Jacks!!!\nA card game where the computer and player has 2 cards, you would have choice to draw or stand and the card sum closest to 21 wins but if you cross it you lose all your money!!!Rules:\n1.Ace is 1 or 11 and Face cards are 10\n2.After you stand the dealer would draw cards if needed\n3.If both the player and dealer crosses 21 the player still loses\n";
     }
     blackJack(User &U) : chance_list(0, 99)
     {
@@ -778,8 +780,13 @@ public:
             return 1;
         return 0;
     }
+    int checkFaceCard(int c){
+        if(c>10) return 10;
+        return c;
+    }
     void playBlackJack()
     {
+        gameInfo();
         while (true)
         {
             int player = 0, dealer = 0, choice, F, aceCountDealer = 0, aceCountPlayer = 0, p = 4, dBJ = 0, pBJ = 0, P = 5;
@@ -806,8 +813,8 @@ public:
                 dealer += 10;
                 aceCountDealer++;
             }
-            player += cards[0] + cards[2];
-            dealer += cards[1] + cards[3];
+            player += checkFaceCard(cards[0]) + checkFaceCard(cards[2]);
+            dealer += checkFaceCard(cards[1]) + checkFaceCard(cards[3]);
             pBJ = checkBlackJack(cards[0], cards[2]);
             dBJ = checkBlackJack(cards[1], cards[3]);
             cout << "Your cards :" << cardValue(cards[0]) << " " << cardValue(cards[2]) << endl;
@@ -861,11 +868,11 @@ public:
                     int c = cards[p];
                     if (chance < u->getLuck() && rng() % 2)
                     {
-                        if (player + c > 21)
+                        if (player + checkFaceCard(c) > 21)
                             c = rng() % 7 + 2;
                     }
                     cout << "Drawed Card : " << cardValue(c) << endl;
-                    player += c;
+                    player += checkFaceCard(c);
                     if (c == 1)
                     {
                         player += 10;
@@ -888,10 +895,10 @@ public:
                         int C = cards[P];
                         if (chance > u->getLuck() && rng() % 2)
                         {
-                            if (dealer + C > 21)
+                            if (dealer + checkFaceCard(C) > 21)
                                 C = rng() % 4 + 2;
                         }
-                        dealer += C;
+                        dealer += checkFaceCard(C);
                         if (C == 1)
                         {
                             dealer += 10;
