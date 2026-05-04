@@ -969,9 +969,9 @@ public:
 
     void playRace()
     {
+        gameInfo();
         while (true)
         {
-            gameInfo();
             placeBet();
 
             int choice;
@@ -1164,7 +1164,6 @@ int main()
     if (h)
         User::showHistory(player->getCID());
 
-    // Game loop
     while (true)
     {
         cout << "\n==============================\n";
